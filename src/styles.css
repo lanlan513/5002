@@ -164,6 +164,104 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 .panel-meta { margin: 16px 0 0; color: #6f8a7e; font: 10px "DM Mono", monospace; }
 .panel-error { color: #f0b4a6; font-size: 13px; line-height: 1.8; }
 
+/* ---------- 功能关系图谱 ---------- */
+
+.view-toggle { display: flex; gap: 4px; padding: 3px; border: 1px solid rgba(184, 232, 203, .22); border-radius: 999px; background: rgba(16, 37, 31, .55); }
+.view-toggle-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: transparent; color: #a9c6b7; font-size: 12px; transition: background .15s, color .15s; }
+.view-toggle-btn:hover { color: #d8f3e4; }
+.view-toggle-btn.is-active { background: #98f0c6; color: #0a1f18; font-weight: 600; }
+
+.relation-stage { display: flex; flex-direction: column; }
+.edge-legend { display: flex; align-items: center; gap: 14px; }
+.edge-legend-item { display: inline-flex; align-items: center; gap: 6px; color: #8fae9e; font-size: 11px; }
+.legend-line { display: inline-block; width: 26px; height: 0; flex: none; }
+.legend-line.kind-information { border-top: 2px dotted #b9a8ff; }
+.legend-line.kind-material { border-top: 2px solid #8fe3b4; }
+.legend-line.kind-energy { border-top: 2px solid #f2c063; }
+
+.relation-canvas-wrap { position: relative; flex: 1; min-height: 0; overflow: auto; background: radial-gradient(circle at 50% 42%, #10302a 0%, #0a201b 52%, #081915 100%); }
+.relation-canvas-wrap::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(152, 240, 198, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(152, 240, 198, .05) 1px, transparent 1px); background-size: 32px 32px; pointer-events: none; }
+.relation-svg { position: relative; width: 100%; height: 100%; min-width: 660px; min-height: 440px; display: block; }
+.relation-error { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; color: #f0b4a6; font-size: 13px; }
+
+/* 关系边 */
+.relation-edge { cursor: pointer; outline: none; transition: opacity .2s; }
+.relation-edge .edge-hit { fill: none; stroke: rgba(0, 0, 0, 0); stroke-width: 18; }
+.relation-edge .edge-line { fill: none; stroke-width: 2; transition: stroke-width .15s; }
+.relation-edge.kind-information .edge-line { stroke: #b9a8ff; stroke-dasharray: 1 7; stroke-linecap: round; stroke-width: 2.5; }
+.relation-edge.kind-material .edge-line { stroke: #8fe3b4; }
+.relation-edge.kind-energy .edge-line { stroke: #f2c063; }
+.relation-edge:hover .edge-line, .relation-edge:focus-visible .edge-line { stroke-width: 3.5; }
+.relation-edge.is-related .edge-line { stroke-width: 3; }
+.relation-edge.is-dim { opacity: .13; }
+.relation-edge.is-flowing .edge-line { stroke-dasharray: 8 7; animation: edge-flow .9s linear infinite; }
+@keyframes edge-flow { to { stroke-dashoffset: -15; } }
+.flow-dot { pointer-events: none; }
+.kind-information .flow-dot { fill: #b9a8ff; }
+.kind-material .flow-dot { fill: #8fe3b4; }
+.kind-energy .flow-dot { fill: #f2c063; }
+.edge-label { font: 600 12px "Noto Sans SC", sans-serif; fill: #d9efe3; paint-order: stroke; stroke: rgba(7, 19, 20, .9); stroke-width: 4px; stroke-linejoin: round; text-anchor: middle; pointer-events: none; }
+
+/* 关系节点 */
+.relation-node { cursor: pointer; outline: none; transition: opacity .2s; }
+.relation-node .node-core { stroke-width: 2; transition: filter .18s; }
+.relation-node.kind-organelle .node-core { fill: rgba(152, 240, 198, .1); stroke: #98f0c6; }
+.relation-node.kind-organelle .node-outer { fill: none; stroke: rgba(152, 240, 198, .35); stroke-width: 1.5; }
+.relation-node.kind-molecule .node-core { fill: rgba(127, 184, 240, .1); stroke: #7fb8f0; }
+.relation-node.kind-energy .node-core { fill: rgba(242, 192, 99, .12); stroke: #f2c063; }
+.relation-node.kind-environment .node-core { fill: rgba(143, 163, 154, .08); stroke: #8fa39a; stroke-dasharray: 4 4; }
+.relation-node:hover .node-core, .relation-node:focus-visible .node-core { filter: drop-shadow(0 0 6px rgba(152, 240, 198, .8)); }
+.relation-node.is-selected .node-core { stroke-width: 3; filter: drop-shadow(0 0 8px rgba(230, 189, 115, .95)); }
+.relation-node.is-dim { opacity: .18; }
+.node-pulse { fill: none; stroke: rgba(230, 189, 115, .8); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: node-pulse 1.6s ease-out infinite; }
+@keyframes node-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.5); opacity: 0; } }
+.node-name { font: 600 13px "Noto Sans SC", sans-serif; fill: #eafaf1; paint-order: stroke; stroke: rgba(7, 19, 20, .88); stroke-width: 4px; stroke-linejoin: round; text-anchor: middle; pointer-events: none; }
+.node-short { font: 600 12px "DM Mono", monospace; fill: #d9efe3; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.node-short.is-long { font-size: 8.5px; }
+
+/* 图谱侧栏 */
+.kind-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 11px; border: 1px solid; margin-bottom: 10px; }
+.kind-badge.kind-organelle { color: #98f0c6; border-color: rgba(152, 240, 198, .5); background: rgba(152, 240, 198, .08); }
+.kind-badge.kind-molecule { color: #7fb8f0; border-color: rgba(127, 184, 240, .5); background: rgba(127, 184, 240, .08); }
+.kind-badge.kind-energy { color: #f2c063; border-color: rgba(242, 192, 99, .5); background: rgba(242, 192, 99, .08); }
+.kind-badge.kind-environment { color: #8fa39a; border-color: rgba(143, 163, 154, .5); background: rgba(143, 163, 154, .08); }
+.kind-badge.kind-information { color: #b9a8ff; border-color: rgba(185, 168, 255, .5); background: rgba(185, 168, 255, .08); }
+.kind-badge.kind-material { color: #8fe3b4; border-color: rgba(143, 227, 180, .5); background: rgba(143, 227, 180, .08); }
+.kind-badge.kind-chain { color: #98f0c6; border-color: rgba(152, 240, 198, .5); background: rgba(152, 240, 198, .08); }
+.panel-edge-route { display: flex; align-items: center; gap: 8px; color: #8fae9e; font-size: 13px; margin: 0 0 4px; }
+.panel-action { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; padding: 9px 16px; border-radius: 8px; border: 1px solid rgba(152, 240, 198, .45); background: rgba(152, 240, 198, .1); color: #98f0c6; font-size: 12.5px; transition: background .15s; }
+.panel-action:hover { background: rgba(152, 240, 198, .2); }
+
+.legend-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.legend-list li { display: flex; align-items: center; gap: 10px; color: #bccfc5; font-size: 12.5px; }
+
+.chain-list { display: grid; gap: 8px; }
+.chain-item { display: grid; gap: 4px; padding: 12px 14px; text-align: left; border: 1px solid rgba(184, 232, 203, .2); border-radius: 8px; background: transparent; color: #e9f5ed; transition: border-color .15s, background .15s; }
+.chain-item:hover { border-color: #98f0c6; background: rgba(152, 240, 198, .06); }
+.chain-item strong { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; }
+.chain-item small { color: #8fae9e; font-size: 12px; line-height: 1.6; }
+.chain-count { flex: none; color: #6f8a7e; font: 10px "DM Mono", monospace; }
+
+.relation-list { display: grid; gap: 8px; }
+.relation-row { display: flex; align-items: center; gap: 8px; }
+.relation-node-jump { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 9px 12px; text-align: left; border: 1px solid rgba(184, 232, 203, .2); border-radius: 8px; background: transparent; color: #d9efe3; font-size: 12.5px; transition: border-color .15s, color .15s; }
+.relation-node-jump:hover { border-color: #98f0c6; color: #98f0c6; }
+.relation-edge-pill { flex: none; padding: 5px 10px; border-radius: 999px; font-size: 11px; border: 1px solid; background: transparent; }
+.relation-edge-pill.kind-information { color: #b9a8ff; border-color: rgba(185, 168, 255, .45); }
+.relation-edge-pill.kind-material { color: #8fe3b4; border-color: rgba(143, 227, 180, .45); }
+.relation-edge-pill.kind-energy { color: #f2c063; border-color: rgba(242, 192, 99, .45); }
+button.relation-edge-pill:hover { background: rgba(255, 255, 255, .06); }
+.relation-item { width: 100%; display: grid; gap: 6px; justify-items: start; padding: 10px 12px; text-align: left; border: 1px solid rgba(184, 232, 203, .2); border-radius: 8px; background: transparent; transition: border-color .15s, background .15s; }
+.relation-item:hover { border-color: #98f0c6; background: rgba(152, 240, 198, .05); }
+.relation-flow { display: flex; align-items: center; gap: 6px; color: #d9efe3; font-size: 12.5px; }
+.relation-tip { margin: 10px 0 0; color: #6f8a7e; font-size: 11px; line-height: 1.7; }
+
+.chain-steps-list { display: grid; gap: 8px; }
+.chain-step { display: flex; align-items: center; gap: 10px; padding: 9px 12px; text-align: left; border: 1px solid rgba(184, 232, 203, .2); border-radius: 8px; background: transparent; color: #d9efe3; font-size: 12.5px; transition: border-color .15s; }
+.chain-step:hover { border-color: #98f0c6; }
+.step-num { flex: none; width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid rgba(152, 240, 198, .4); border-radius: 50%; color: #98f0c6; font: 10px "DM Mono", monospace; }
+.step-route { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+
 .skeleton { position: relative; overflow: hidden; border-radius: 6px; background: rgba(184, 232, 203, .09); }
 .skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(232, 250, 240, .08), transparent); animation: shimmer 1.4s infinite; }
 @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
@@ -221,6 +319,10 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
   .explorer-page { padding: 76px 14px 16px; }
   .explorer-topbar { gap: 12px; margin-bottom: 12px; }
   .explorer-topbar h1 { font-size: 24px; }
+  .view-toggle { order: 3; width: 100%; }
+  .view-toggle-btn { flex: 1; justify-content: center; padding: 7px 10px; }
+  .edge-legend { display: none; }
+  .relation-svg { min-width: 600px; min-height: 400px; }
   .cell-tabs { gap: 8px; }
   .cell-tab { padding: 6px 14px 6px 8px; gap: 8px; }
   .cell-tab .tab-icon { width: 30px; height: 30px; }

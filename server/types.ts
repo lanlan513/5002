@@ -75,3 +75,50 @@ export interface OrganelleSeed {
   location: string;
   knowledge: string[];
 }
+
+/* ---------- 细胞器功能关系图谱 ---------- */
+
+/** 关系节点类型：细胞器 / 分子 / 能量 / 细胞外环境 */
+export type RelationNodeKind = "organelle" | "molecule" | "energy" | "environment";
+
+/** 关系边类型：信息流动 / 物质流动 / 能量流动 */
+export type RelationEdgeKind = "information" | "material" | "energy";
+
+/**
+ * 关系图谱中的一个节点。kind 为 organelle 时通过 organelleId 关联细胞器；
+ * x / y 是图谱画布（960 × 640）中的布局坐标。
+ */
+export interface RelationNodeSeed {
+  id: string;
+  name: string;
+  englishName?: string;
+  shortName?: string;
+  kind: RelationNodeKind;
+  organelleId?: string;
+  description: string;
+  x: number;
+  y: number;
+}
+
+/**
+ * 一条有向关系边（from → to）。bend 控制二次贝塞尔曲线控制点
+ * 沿方向左侧法线的偏移量，用于让长连线绕开中间节点。
+ */
+export interface RelationEdgeSeed {
+  id: string;
+  from: string;
+  to: string;
+  label: string;
+  kind: RelationEdgeKind;
+  description: string;
+  bend?: number;
+}
+
+/** 关系链：把若干条边按顺序串成一条功能通路（如“中心法则”） */
+export interface RelationChainSeed {
+  id: string;
+  name: string;
+  summary: string;
+  position: number;
+  edgeIds: string[];
+}

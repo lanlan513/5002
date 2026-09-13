@@ -48,4 +48,58 @@ export interface OrganelleDetail {
   location: string;
   knowledge: string[];
   presentIn: string[];
+  relationNodeId: string | null;
+  relations: OrganelleRelation[];
 }
+
+/* ---------- 细胞器功能关系图谱 ---------- */
+
+export type RelationNodeKind = "organelle" | "molecule" | "energy" | "environment";
+export type RelationEdgeKind = "information" | "material" | "energy";
+
+export interface RelationNode {
+  id: string;
+  name: string;
+  englishName?: string;
+  shortName?: string;
+  kind: RelationNodeKind;
+  organelleId?: string;
+  description: string;
+  x: number;
+  y: number;
+}
+
+export interface RelationEdge {
+  id: string;
+  from: string;
+  to: string;
+  label: string;
+  kind: RelationEdgeKind;
+  description: string;
+  bend: number;
+}
+
+export interface RelationChain {
+  id: string;
+  name: string;
+  summary: string;
+  edgeIds: string[];
+}
+
+export interface RelationGraph {
+  nodes: RelationNode[];
+  edges: RelationEdge[];
+  chains: RelationChain[];
+}
+
+/** 细胞器详情中携带的一条功能关系（方向以该细胞器为参照） */
+export interface OrganelleRelation {
+  edgeId: string;
+  label: string;
+  kind: RelationEdgeKind;
+  direction: "out" | "in";
+  other: { id: string; name: string; kind: RelationNodeKind };
+}
+
+/** 图谱中的当前选中项：节点或连线 */
+export type RelationSelection = { type: "node"; id: string } | { type: "edge"; id: string };

@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { knowledge, topics } from "./seed.js";
 import { cellSeeds, organelleSeeds } from "./cellSeed.js";
+import { relationChainSeeds, relationEdgeSeeds, relationNodeSeeds } from "./relationSeed.js";
 
 const db = new Database("biolab.db");
 db.pragma("journal_mode = WAL");
@@ -79,6 +80,44 @@ db.exec(`
     z_index INTEGER NOT NULL,
     PRIMARY KEY (cell_id, organelle_id)
   );
+
+  /* ---------- 细胞器功能关系图谱 ---------- */
+
+  CREATE TABLE IF NOT EXISTS relation_nodes (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    english_name TEXT,
+    short_name TEXT,
+    kind TEXT NOT NULL,              -- organelle | molecule | energy | environment
+    organelle_id TEXT REFERENCES organelles(id),
+    description TEXT NOT NULL,
+    x REAL NOT NULL,                 -- 图谱画布（960 × 640）中的布局坐标
+    y REAL NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS relation_edges (
+    id TEXT PRIMARY KEY,
+    from_node TEXT NOT NULL REFERENCES relation_nodes(id),
+    to_node TEXT NOT NULL REFERENCES relation_nodes(id),
+    label TEXT NOT NULL,             -- 过程名称，如“转录”“囊泡运输”
+    kind TEXT NOT NULL,              -- information | material | energy
+    description TEXT NOT NULL,       -- 点击连线时展示的生物学解释
+    bend REAL NOT NULL DEFAULT 0     -- 连线弯曲程度（避开中间节点）
+  );
+
+  CREATE TABLE IF NOT EXISTS relation_chains (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    position INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS chain_edges (
+    chain_id TEXT NOT NULL REFERENCES relation_chains(id),
+    edge_id TEXT NOT NULL REFERENCES relation_edges(id),
+    position INTEGER NOT NULL,       -- 边在链中的顺序（用于依次播放流动动画）
+    PRIMARY KEY (chain_id, edge_id)
+  );
 `);
 
 const hasTopics = db.prepare("SELECT COUNT(*) AS count FROM topics").get() as { count: number };
@@ -136,6 +175,44 @@ if (hasCells.count === 0) {
           shapes: JSON.stringify(structure.shapes),
           z: structure.z
         })
+      );
+    });
+  })();
+}
+
+const hasRelations = db.prepare("SELECT COUNT(*) AS count FROM relation_nodes").get() as { count: number };
+if (hasRelations.count === 0) {
+  const insertNode = db.prepare(`
+    INSERT INTO relation_nodes (id, name, english_name, short_name, kind, organelle_id, description, x, y)
+    VALUES (@id, @name, @englishName, @shortName, @kind, @organelleId, @description, @x, @y)
+  `);
+  const insertEdge = db.prepare(`
+    INSERT INTO relation_edges (id, from_node, to_node, label, kind, description, bend)
+    VALUES (@id, @from, @to, @label, @kind, @description, @bend)
+  `);
+  const insertChain = db.prepare(`
+    INSERT INTO relation_chains (id, name, summary, position)
+    VALUES (@id, @name, @summary, @position)
+  `);
+  const insertChainEdge = db.prepare(`
+    INSERT INTO chain_edges (chain_id, edge_id, position)
+    VALUES (@chainId, @edgeId, @position)
+  `);
+
+  db.transaction(() => {
+    relationNodeSeeds.forEach((node) =>
+      insertNode.run({
+        ...node,
+        englishName: node.englishName ?? null,
+        shortName: node.shortName ?? null,
+        organelleId: node.organelleId ?? null
+      })
+    );
+    relationEdgeSeeds.forEach((edge) => insertEdge.run({ ...edge, bend: edge.bend ?? 0 }));
+    relationChainSeeds.forEach((chain) => {
+      insertChain.run(chain);
+      chain.edgeIds.forEach((edgeId, index) =>
+        insertChainEdge.run({ chainId: chain.id, edgeId, position: index + 1 })
       );
     });
   })();

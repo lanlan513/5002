@@ -90,6 +90,83 @@ interface OrganelleRow {
   knowledge: string;
 }
 
+interface RelationNodeRow {
+  id: string;
+  name: string;
+  english_name: string | null;
+  short_name: string | null;
+  kind: string;
+  organelle_id: string | null;
+  description: string;
+  x: number;
+  y: number;
+}
+
+interface RelationEdgeRow {
+  id: string;
+  from_node: string;
+  to_node: string;
+  label: string;
+  kind: string;
+  description: string;
+  bend: number;
+}
+
+const parseRelationNode = (row: RelationNodeRow) => ({
+  id: row.id,
+  name: row.name,
+  englishName: row.english_name ?? undefined,
+  shortName: row.short_name ?? undefined,
+  kind: row.kind,
+  organelleId: row.organelle_id ?? undefined,
+  description: row.description,
+  x: row.x,
+  y: row.y
+});
+
+const parseRelationEdge = (row: RelationEdgeRow) => ({
+  id: row.id,
+  from: row.from_node,
+  to: row.to_node,
+  label: row.label,
+  kind: row.kind,
+  description: row.description,
+  bend: row.bend
+});
+
+/** 查询某个关系节点参与的全部关系（供细胞器详情与图谱共用） */
+const relationsOfNode = (nodeId: string) =>
+  (
+    db
+      .prepare(`
+        SELECT e.id AS edge_id, e.label, e.kind, e.from_node, e.to_node,
+               n.name AS other_name, n.kind AS other_kind
+        FROM relation_edges e
+        JOIN relation_nodes n ON n.id = (CASE WHEN e.from_node = ? THEN e.to_node ELSE e.from_node END)
+        WHERE e.from_node = ? OR e.to_node = ?
+        ORDER BY e.id
+      `)
+      .all(nodeId, nodeId, nodeId) as Array<{
+      edge_id: string;
+      label: string;
+      kind: string;
+      from_node: string;
+      to_node: string;
+      other_name: string;
+      other_kind: string;
+    }>
+  ).map((row) => ({
+    edgeId: row.edge_id,
+    label: row.label,
+    kind: row.kind,
+    direction: (row.from_node === nodeId ? "out" : "in") as "out" | "in",
+    other: {
+      id: row.from_node === nodeId ? row.to_node : row.from_node,
+      name: row.other_name,
+      kind: row.other_kind
+    }
+  }));
+
 const parseCell = (row: CellRow) => ({
   id: row.id,
   name: row.name,
@@ -146,7 +223,7 @@ app.get("/api/cells/:id", (request, response) => {
   });
 });
 
-/** 细胞器详情：名称、功能、位置、相关知识，以及它出现在哪些细胞中 */
+/** 细胞器详情：名称、功能、位置、相关知识，以及它出现在哪些细胞中、参与哪些功能关系 */
 app.get("/api/organelles/:id", (request, response) => {
   const row = db.prepare("SELECT * FROM organelles WHERE id = ?").get(request.params.id) as OrganelleRow | undefined;
   if (!row) return response.status(404).json({ message: "未找到该细胞器" });
@@ -155,6 +232,11 @@ app.get("/api/organelles/:id", (request, response) => {
     db.prepare("SELECT cell_id FROM cell_structures WHERE organelle_id = ?").all(request.params.id) as Array<{ cell_id: string }>
   ).map((r) => r.cell_id);
 
+  /* 该细胞器在关系图谱中的节点及其参与的功能关系 */
+  const node = db.prepare("SELECT id FROM relation_nodes WHERE organelle_id = ?").get(request.params.id) as
+    | { id: string }
+    | undefined;
+
   return response.json({
     id: row.id,
     name: row.name,
@@ -162,8 +244,44 @@ app.get("/api/organelles/:id", (request, response) => {
     function: row.function,
     location: row.location,
     knowledge: JSON.parse(row.knowledge) as string[],
-    presentIn
+    presentIn,
+    relationNodeId: node?.id ?? null,
+    relations: node ? relationsOfNode(node.id) : []
   });
+});
+
+/* ---------- 细胞器功能关系图谱 API ---------- */
+
+/** 完整关系图谱：节点 + 有向关系边 + 关系链（前端据此渲染连线与流动动画） */
+app.get("/api/relations", (_request, response) => {
+  const nodes = (db.prepare("SELECT * FROM relation_nodes").all() as RelationNodeRow[]).map(parseRelationNode);
+  const edges = (db.prepare("SELECT * FROM relation_edges").all() as RelationEdgeRow[]).map(parseRelationEdge);
+  const chains = (
+    db.prepare("SELECT * FROM relation_chains ORDER BY position").all() as Array<{
+      id: string;
+      name: string;
+      summary: string;
+    }>
+  ).map((chain) => ({
+    ...chain,
+    edgeIds: (
+      db
+        .prepare("SELECT edge_id FROM chain_edges WHERE chain_id = ? ORDER BY position")
+        .all(chain.id) as Array<{ edge_id: string }>
+    ).map((row) => row.edge_id)
+  }));
+
+  response.json({ nodes, edges, chains });
+});
+
+/** 单个关系节点详情：解释文案 + 与它相连的全部关系（用于“继续探索相关节点”） */
+app.get("/api/relations/nodes/:id", (request, response) => {
+  const row = db.prepare("SELECT * FROM relation_nodes WHERE id = ?").get(request.params.id) as
+    | RelationNodeRow
+    | undefined;
+  if (!row) return response.status(404).json({ message: "未找到该关系节点" });
+
+  return response.json({ ...parseRelationNode(row), relations: relationsOfNode(row.id) });
 });
 
 app.post("/api/interactions", (request, response) => {

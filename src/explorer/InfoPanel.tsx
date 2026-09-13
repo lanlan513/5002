@@ -1,4 +1,4 @@
-import { ArrowLeft, Dna, Lightbulb, MapPin, MousePointerClick, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Dna, Lightbulb, MapPin, MousePointerClick, Sparkles, Workflow } from "lucide-react";
 import type { CellDetail, CellSummary, OrganelleDetail } from "../types";
 import { cellIcon } from "./cellIcons";
 
@@ -10,9 +10,10 @@ interface InfoPanelProps {
   detailError: string | null;
   onBack: () => void;
   onGoToCell: (cellId: string, organelleId: string) => void;
+  onExploreRelation: (edgeId: string) => void;
 }
 
-export default function InfoPanel({ cell, cells, detail, detailLoading, detailError, onBack, onGoToCell }: InfoPanelProps) {
+export default function InfoPanel({ cell, cells, detail, detailLoading, detailError, onBack, onGoToCell, onExploreRelation }: InfoPanelProps) {
   if (detailLoading) {
     return (
       <aside className="info-panel" aria-busy="true">
@@ -67,6 +68,33 @@ export default function InfoPanel({ cell, cells, detail, detailLoading, detailEr
           <h3><Dna size={15} /> 主要功能</h3>
           <p>{detail.function}</p>
         </div>
+
+        {detail.relations.length > 0 && (
+          <div className="panel-section">
+            <h3><Workflow size={15} /> 功能关系</h3>
+            <div className="relation-list">
+              {detail.relations.map((rel) => (
+                <button
+                  key={rel.edgeId}
+                  className="relation-item"
+                  onClick={() => onExploreRelation(rel.edgeId)}
+                  title="在功能关系图谱中查看"
+                >
+                  <span className="relation-flow">
+                    {rel.direction === "out" ? (
+                      <>{detail.name} <ArrowRight size={12} /> {rel.other.name}</>
+                    ) : (
+                      <>{rel.other.name} <ArrowRight size={12} /> {detail.name}</>
+                    )}
+                  </span>
+                  <span className={`relation-edge-pill kind-${rel.kind}`}>{rel.label}</span>
+                </button>
+              ))}
+            </div>
+            <p className="relation-tip">点击任意关系，在图谱中查看物质与信息的流动。</p>
+          </div>
+        )}
+
         <div className="panel-section">
           <h3><MapPin size={15} /> 分布位置</h3>
           <p>{detail.location}</p>
