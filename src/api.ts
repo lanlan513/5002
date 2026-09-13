@@ -1,4 +1,4 @@
-import type { CellDetail, CellSummary, OrganelleDetail, RelationGraph } from "./types";
+import type { CellDetail, CellSummary, OrganelleDetail, ProcessDetail, ProcessSummary, RelationGraph } from "./types";
 
 export type Topic = {
   id: number;
@@ -44,6 +44,9 @@ export const api = {
   cell: (id: string) => getJson<CellDetail>(`/api/cells/${id}`),
   organelle: (id: string) => getJson<OrganelleDetail>(`/api/organelles/${id}`),
   relations: () => getJson<RelationGraph>("/api/relations"),
+  /* 生命过程动态模拟 */
+  processes: () => getJson<{ processes: ProcessSummary[] }>("/api/processes"),
+  process: (id: string) => getJson<ProcessDetail>(`/api/processes/${id}`),
   track: (entityType: string, entitySlug: string) =>
     fetch("/api/interactions", {
       method: "POST",

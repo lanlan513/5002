@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { knowledge, topics } from "./seed.js";
 import { cellSeeds, organelleSeeds } from "./cellSeed.js";
+import { processSeeds } from "./processSeed.js";
 import { relationChainSeeds, relationEdgeSeeds, relationNodeSeeds } from "./relationSeed.js";
 
 const db = new Database("biolab.db");
@@ -118,6 +119,59 @@ db.exec(`
     position INTEGER NOT NULL,       -- 边在链中的顺序（用于依次播放流动动画）
     PRIMARY KEY (chain_id, edge_id)
   );
+
+  /* ---------- 生命过程动态模拟 ---------- */
+
+  CREATE TABLE IF NOT EXISTS processes (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    english_name TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    cell_ids TEXT NOT NULL,          -- JSON 数组：可在哪些细胞中观察
+    initial_metrics TEXT NOT NULL,   -- JSON 数组：初始指标值
+    scene_view_box TEXT NOT NULL,    -- JSON：{x, y, w, h}
+    position INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS process_steps (
+    process_id TEXT NOT NULL REFERENCES processes(id),
+    position INTEGER NOT NULL,       -- 从 1 开始
+    title TEXT NOT NULL,
+    event TEXT NOT NULL,
+    description TEXT NOT NULL,
+    highlights TEXT NOT NULL,        -- JSON 数组：关键生物学知识点
+    organelle_id TEXT REFERENCES organelles(id),
+    duration REAL NOT NULL,          -- 该阶段播放时长（秒）
+    PRIMARY KEY (process_id, position)
+  );
+
+  CREATE TABLE IF NOT EXISTS process_entities (
+    process_id TEXT NOT NULL REFERENCES processes(id),
+    entity_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    name TEXT,
+    organelle_id TEXT REFERENCES organelles(id),
+    shapes TEXT NOT NULL,            -- JSON 数组：以 (0,0) 为中心的 SVG 图形
+    track TEXT NOT NULL,             -- JSON 数组：每个关键帧的状态
+    path TEXT,                       -- 可选：沿 SVG 路径运动
+    orient_path INTEGER NOT NULL DEFAULT 0,
+    label TEXT,                      -- JSON：{dx, dy}
+    z_index INTEGER NOT NULL DEFAULT 0,
+    entity_order INTEGER NOT NULL,   -- 同过程内的声明顺序（叠放兜底）
+    PRIMARY KEY (process_id, entity_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS process_metrics (
+    process_id TEXT NOT NULL REFERENCES processes(id),
+    metric_id TEXT NOT NULL,
+    label TEXT NOT NULL,
+    unit TEXT NOT NULL,
+    kind TEXT NOT NULL,              -- count | percent | number | text
+    metric_values TEXT NOT NULL,     -- JSON 数组：每一步结束时的取值（values 为保留字）
+    position INTEGER NOT NULL,
+    PRIMARY KEY (process_id, metric_id)
+  );
 `);
 
 const hasTopics = db.prepare("SELECT COUNT(*) AS count FROM topics").get() as { count: number };
@@ -213,6 +267,88 @@ if (hasRelations.count === 0) {
       insertChain.run(chain);
       chain.edgeIds.forEach((edgeId, index) =>
         insertChainEdge.run({ chainId: chain.id, edgeId, position: index + 1 })
+      );
+    });
+  })();
+}
+
+/* ---------- 生命过程动态模拟种子 ---------- */
+
+const hasProcesses = db.prepare("SELECT COUNT(*) AS count FROM processes").get() as { count: number };
+if (hasProcesses.count === 0) {
+  const insertProcess = db.prepare(`
+    INSERT INTO processes (id, name, english_name, icon, summary, cell_ids, initial_metrics, scene_view_box, position)
+    VALUES (@id, @name, @englishName, @icon, @summary, @cellIds, @initialMetrics, @sceneViewBox, @position)
+  `);
+  const insertStep = db.prepare(`
+    INSERT INTO process_steps (process_id, position, title, event, description, highlights, organelle_id, duration)
+    VALUES (@processId, @position, @title, @event, @description, @highlights, @organelleId, @duration)
+  `);
+  const insertEntity = db.prepare(`
+    INSERT INTO process_entities
+      (process_id, entity_id, kind, name, organelle_id, shapes, track, path, orient_path, label, z_index, entity_order)
+    VALUES
+      (@processId, @entityId, @kind, @name, @organelleId, @shapes, @track, @path, @orientPath, @label, @z, @order)
+  `);
+  const insertMetric = db.prepare(`
+    INSERT INTO process_metrics (process_id, metric_id, label, unit, kind, metric_values, position)
+    VALUES (@processId, @metricId, @label, @unit, @kind, @values, @position)
+  `);
+
+  db.transaction(() => {
+    processSeeds.forEach((process) => {
+      insertProcess.run({
+        id: process.id,
+        name: process.name,
+        englishName: process.englishName,
+        icon: process.icon,
+        summary: process.summary,
+        cellIds: JSON.stringify(process.cellIds),
+        initialMetrics: JSON.stringify(process.initialMetrics),
+        sceneViewBox: JSON.stringify(process.sceneViewBox),
+        position: process.position
+      });
+
+      process.steps.forEach((step, index) =>
+        insertStep.run({
+          processId: process.id,
+          position: index + 1,
+          title: step.title,
+          event: step.event,
+          description: step.description,
+          highlights: JSON.stringify(step.highlights),
+          organelleId: step.organelleId,
+          duration: step.duration
+        })
+      );
+
+      process.entities.forEach((entityItem, order) =>
+        insertEntity.run({
+          processId: process.id,
+          entityId: entityItem.id,
+          kind: entityItem.kind,
+          name: entityItem.name ?? null,
+          organelleId: entityItem.organelleId ?? null,
+          shapes: JSON.stringify(entityItem.shapes),
+          track: JSON.stringify(entityItem.track),
+          path: entityItem.path ?? null,
+          orientPath: entityItem.orientPath ? 1 : 0,
+          label: entityItem.label ? JSON.stringify(entityItem.label) : null,
+          z: entityItem.z ?? order,
+          order
+        })
+      );
+
+      process.metrics.forEach((metric, index) =>
+        insertMetric.run({
+          processId: process.id,
+          metricId: metric.id,
+          label: metric.label,
+          unit: metric.unit,
+          kind: metric.kind,
+          values: JSON.stringify(metric.values),
+          position: index
+        })
       );
     });
   })();

@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Microscope, Workflow } from "lucide-react";
+import { ArrowLeft, Microscope, PlayCircle, Workflow } from "lucide-react";
 import { api } from "../api";
-import type { CellDetail, CellSummary, OrganelleDetail, RelationGraph as RelationGraphData, RelationSelection } from "../types";
+import type { CellDetail, CellSummary, OrganelleDetail, ProcessSummary, RelationGraph as RelationGraphData, RelationSelection } from "../types";
 import CellCanvas from "./CellCanvas";
 import CompareModal from "./CompareModal";
 import InfoPanel from "./InfoPanel";
+import ProcessExplorer from "./ProcessExplorer";
 import RelationGraph from "./RelationGraph";
 import RelationPanel from "./RelationPanel";
 import { cellIcon } from "./cellIcons";
 
-type ExplorerView = "structure" | "relations";
+type ExplorerView = "structure" | "relations" | "process";
 
 export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) => void }) {
   const [cells, setCells] = useState<CellSummary[]>([]);
@@ -30,6 +31,12 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
   const [graphError, setGraphError] = useState<string | null>(null);
   const [relSelection, setRelSelection] = useState<RelationSelection | null>(null);
   const [activeChainId, setActiveChainId] = useState<string | null>(null);
+
+  /* ---------- 生命过程动态模拟 ---------- */
+  const [processes, setProcesses] = useState<ProcessSummary[]>([]);
+  const [processesLoading, setProcessesLoading] = useState(false);
+  const [processesError, setProcessesError] = useState<string | null>(null);
+  const processesRequested = useRef(false);
 
   const cellSeq = useRef(0);
   const detailSeq = useRef(0);
@@ -101,12 +108,30 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
     }
   }, []);
 
+  /** 生命过程列表只需加载一次，失败时允许重试 */
+  const loadProcesses = useCallback(async () => {
+    if (processesRequested.current) return;
+    processesRequested.current = true;
+    setProcessesLoading(true);
+    setProcessesError(null);
+    try {
+      const data = await api.processes();
+      setProcesses(data.processes);
+    } catch (e) {
+      processesRequested.current = false;
+      setProcessesError((e as Error).message);
+    } finally {
+      setProcessesLoading(false);
+    }
+  }, []);
+
   const switchView = useCallback(
     (next: ExplorerView) => {
       setView(next);
       if (next === "relations") void loadGraph();
+      if (next === "process") void loadProcesses();
     },
-    [loadGraph]
+    [loadGraph, loadProcesses]
   );
 
   /** 从细胞器详情等入口跳进图谱，并选中某个节点或某条关系 */
@@ -222,6 +247,14 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
             onClick={() => switchView("relations")}
           >
             <Workflow size={14} /> 功能关系
+          </button>
+          <button
+            role="tab"
+            aria-selected={view === "process"}
+            className={`view-toggle-btn ${view === "process" ? "is-active" : ""}`}
+            onClick={() => switchView("process")}
+          >
+            <PlayCircle size={14} /> 生命过程
           </button>
         </div>
         <div className="cell-tabs" role="tablist" aria-label="选择细胞类型">
@@ -395,6 +428,22 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
         <div className="loading">
           <span className="loading-ring" /> 载入细胞数据
         </div>
+      )}
+
+      {view === "process" && (
+        <ProcessExplorer
+          cells={cells}
+          cell={cell}
+          summaries={processes}
+          summariesLoading={processesLoading}
+          summariesError={processesError}
+          onReloadSummaries={() => void loadProcesses()}
+          onInspectOrganelle={(organelleId) => void viewOrganelle(organelleId)}
+          onSwitchCell={(cellId) => {
+            void loadCell(cellId).then(() => setView("structure"));
+          }}
+          onTrack={(entity, id) => void api.track(entity, id)}
+        />
       )}
 
       <CompareModal cells={cells} open={compareOpen} onClose={() => setCompareOpen(false)} />

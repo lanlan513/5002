@@ -284,6 +284,140 @@ app.get("/api/relations/nodes/:id", (request, response) => {
   return response.json({ ...parseRelationNode(row), relations: relationsOfNode(row.id) });
 });
 
+/* ---------- 生命过程动态模拟 API ---------- */
+
+interface ProcessRow {
+  id: string;
+  name: string;
+  english_name: string;
+  icon: string;
+  summary: string;
+  cell_ids: string;
+  initial_metrics: string;
+  scene_view_box: string;
+  position: number;
+}
+
+interface ProcessStepRow {
+  position: number;
+  title: string;
+  event: string;
+  description: string;
+  highlights: string;
+  organelle_id: string;
+  duration: number;
+}
+
+interface ProcessEntityRow {
+  entity_id: string;
+  kind: string;
+  name: string | null;
+  organelle_id: string | null;
+  shapes: string;
+  track: string;
+  path: string | null;
+  orient_path: number;
+  label: string | null;
+  z_index: number;
+  entity_order: number;
+}
+
+interface ProcessMetricRow {
+  metric_id: string;
+  label: string;
+  unit: string;
+  kind: string;
+  metric_values: string;
+  position: number;
+}
+
+const parseProcessRow = (row: ProcessRow) => ({
+  id: row.id,
+  name: row.name,
+  englishName: row.english_name,
+  icon: row.icon,
+  summary: row.summary,
+  cellIds: JSON.parse(row.cell_ids) as string[],
+  position: row.position,
+  stepCount: (
+    db.prepare("SELECT COUNT(*) AS count FROM process_steps WHERE process_id = ?").get(row.id) as {
+      count: number;
+    }
+  ).count,
+  totalDuration:
+    (
+      db.prepare("SELECT COALESCE(SUM(duration), 0) AS total FROM process_steps WHERE process_id = ?").get(row.id) as {
+        total: number;
+      }
+    ).total ?? 0
+});
+
+/** 生命过程列表（摘要，供选择器与细胞视角过滤使用） */
+app.get("/api/processes", (_request, response) => {
+  const rows = db
+    .prepare("SELECT * FROM processes ORDER BY position")
+    .all() as ProcessRow[];
+  response.json({ processes: rows.map(parseProcessRow) });
+});
+
+/** 单个过程的完整模拟数据：步骤 / 实体关键帧 / 状态指标 */
+app.get("/api/processes/:id", (request, response) => {
+  const row = db.prepare("SELECT * FROM processes WHERE id = ?").get(request.params.id) as
+    | ProcessRow
+    | undefined;
+  if (!row) return response.status(404).json({ message: "未找到该生命过程" });
+
+  const steps = (
+    db
+      .prepare("SELECT * FROM process_steps WHERE process_id = ? ORDER BY position")
+      .all(request.params.id) as ProcessStepRow[]
+  ).map((step) => ({
+    title: step.title,
+    event: step.event,
+    description: step.description,
+    highlights: JSON.parse(step.highlights) as string[],
+    organelleId: step.organelle_id,
+    duration: step.duration
+  }));
+
+  const entities = (
+    db
+      .prepare("SELECT * FROM process_entities WHERE process_id = ? ORDER BY z_index, entity_order")
+      .all(request.params.id) as ProcessEntityRow[]
+  ).map((entityItem) => ({
+    id: entityItem.entity_id,
+    kind: entityItem.kind,
+    name: entityItem.name ?? undefined,
+    organelleId: entityItem.organelle_id ?? undefined,
+    shapes: JSON.parse(entityItem.shapes),
+    track: JSON.parse(entityItem.track),
+    path: entityItem.path ?? undefined,
+    orientPath: entityItem.orient_path === 1,
+    label: entityItem.label ? JSON.parse(entityItem.label) : undefined
+  }));
+
+  const metrics = (
+    db
+      .prepare("SELECT * FROM process_metrics WHERE process_id = ? ORDER BY position")
+      .all(request.params.id) as ProcessMetricRow[]
+  ).map((metric) => ({
+    id: metric.metric_id,
+    label: metric.label,
+    unit: metric.unit,
+    kind: metric.kind,
+    values: JSON.parse(metric.metric_values)
+  }));
+
+  return response.json({
+    ...parseProcessRow(row),
+    initialMetrics: JSON.parse(row.initial_metrics) as Array<number | string>,
+    sceneViewBox: JSON.parse(row.scene_view_box) as { x: number; y: number; w: number; h: number },
+    steps,
+    entities,
+    metrics
+  });
+});
+
 app.post("/api/interactions", (request, response) => {
   const { sessionId, eventType, entityType, entitySlug } = request.body ?? {};
   if (![sessionId, eventType, entityType, entitySlug].every((value) => typeof value === "string")) {
