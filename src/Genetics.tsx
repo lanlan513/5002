@@ -118,16 +118,18 @@ function DnaHelix({
       const cx = width / 2;
       const pad = 36;
       const step = (height - pad * 2) / Math.max(count - 1, 1);
-      const radius = Math.min(width * 0.3, 118) * (1 + t * 0.1);
+      const radius = Math.min(width * 0.3, 118) * (1 + t * 0.15);
       const twist = 0.62 * (1 - t);
       const rotTerm = state.rot * (1 - t);
+      // 展开终态相位为 π/2：两条骨架链分居中轴两侧，横档保持完整长度
+      const flatten = t * Math.PI * 0.5;
 
       type StrandPoint = { x: number; y: number; z: number };
       const left: StrandPoint[] = [];
       const right: StrandPoint[] = [];
       for (let i = 0; i < count; i++) {
         const y = pad + i * step;
-        const phase = i * twist + rotTerm;
+        const phase = i * twist + rotTerm + flatten;
         const offset = Math.sin(phase) * radius;
         const depth = Math.cos(phase);
         left.push({ x: cx + offset, y, z: depth });
@@ -211,12 +213,14 @@ function DnaHelix({
 
         if (t > 0.4 || isSelected) {
           context.font = "10px 'DM Mono', monospace";
-          context.textAlign = "right";
-          context.fillStyle = hexWithAlpha(BASE_COLORS[base], Math.min(1, alpha + 0.15));
-          context.fillText(base, l.x - 9, l.y + 3.5);
-          context.textAlign = "left";
-          context.fillStyle = hexWithAlpha(BASE_COLORS[comp], Math.min(1, alpha + 0.15));
-          context.fillText(comp, r.x + 9, r.y + 3.5);
+          const drawLetter = (point: StrandPoint, letter: string, color: string) => {
+            const outside = point.x >= cx;
+            context.textAlign = outside ? "left" : "right";
+            context.fillStyle = color;
+            context.fillText(letter, point.x + (outside ? 9 : -9), point.y + 3.5);
+          };
+          drawLetter(l, base, hexWithAlpha(BASE_COLORS[base], Math.min(1, alpha + 0.15)));
+          drawLetter(r, comp, hexWithAlpha(BASE_COLORS[comp], Math.min(1, alpha + 0.15)));
         }
       }
 
@@ -301,12 +305,21 @@ function GeneticsPage({
     setChromosome(null);
     setGene(null);
     if (level === "chromosome" && slug) {
+      // 离开基因层时复位双螺旋：序列、工具栏标签与选中碱基一并清除
+      setSpotlightGene(null);
+      setSelectedPair(null);
       api.chromosome(slug).then((loaded) => {
         setChromosome(loaded);
         void api.track("chromosome", slug);
       }).catch(console.error);
+      return;
     }
-    if (level === "gene" && slug) {
+    if (level !== "gene") {
+      setSpotlightGene(null);
+      setSelectedPair(null);
+      return;
+    }
+    if (slug) {
       api.gene(slug).then((loaded) => {
         setGene(loaded);
         setSpotlightGene(loaded);
