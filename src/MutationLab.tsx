@@ -621,15 +621,18 @@ function SequenceStage({
         <div className="stage-row">
           {groups.map((group, groupIndex) => (
             <span className="stage-codon" key={groupIndex}>
-              {group.map((column, columnIndex) => (
-                <span
-                  key={columnIndex}
-                  className={`stage-base kind-${column.kind}`}
-                  style={{ color: BASE_COLORS[toLetter(column.wtBase) ?? "A"] }}
-                >
-                  {toLetter(column.wtBase) ?? "·"}
-                </span>
-              ))}
+              {group.map((column, columnIndex) => {
+                const letter = toLetter(column.wtBase);
+                return (
+                  <span
+                    key={columnIndex}
+                    className={`stage-base kind-${column.kind}`}
+                    style={{ color: letter ? BASE_COLORS[letter] : "#5a7067" }}
+                  >
+                    {letter ?? "·"}
+                  </span>
+                );
+              })}
             </span>
           ))}
         </div>
@@ -637,15 +640,18 @@ function SequenceStage({
         <div className="stage-row">
           {groups.map((group, groupIndex) => (
             <span className="stage-codon" key={groupIndex}>
-              {group.map((column, columnIndex) => (
-                <span
-                  key={columnIndex}
-                  className={`stage-base kind-${column.kind}`}
-                  style={{ color: BASE_COLORS[toLetter(column.mutBase) ?? "A"] }}
-                >
-                  {toLetter(column.mutBase) ?? "·"}
-                </span>
-              ))}
+              {group.map((column, columnIndex) => {
+                const letter = toLetter(column.mutBase);
+                return (
+                  <span
+                    key={columnIndex}
+                    className={`stage-base kind-${column.kind}`}
+                    style={{ color: letter ? BASE_COLORS[letter] : "#5a7067" }}
+                  >
+                    {letter ?? "·"}
+                  </span>
+                );
+              })}
             </span>
           ))}
         </div>

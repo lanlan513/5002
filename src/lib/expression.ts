@@ -464,13 +464,13 @@ export const MUTATION_PRESETS: MutationPreset[] = [
   }
 ];
 
-/** HBB 经典案例：β-珠蛋白第 6 位 Glu -> Val（GAG -> GTG），仅当序列吻合时可用 */
+/** HBB 经典案例：GAG -> GTG（成熟 β-珠蛋白第 6 位 Glu -> Val），仅当序列吻合时可用 */
 export const HBB_SICKLE_PRESET: MutationPreset = {
   id: "hbb-sickle",
   tag: "经典案例",
-  title: "HBB 第 6 密码子 GAG → GTG",
+  title: "HBB 第 7 密码子 GAG → GTG",
   story:
-    "这是研究得最充分的点突变之一：β-珠蛋白第 6 位氨基酸由谷氨酸变为缬氨酸。两个拷贝都携带时与镰刀型贫血相关；只携带一个拷贝时通常没有明显症状，在疟疾流行地区甚至可能具有生存优势——同一突变在不同遗传背景与环境下意义截然不同。",
+    "这是研究得最充分的点突变之一。它编码的谷氨酸是成熟 β-珠蛋白的第 6 位（起始甲硫氨酸在加工中被切除，故经典文献记作 Glu6Val），变为缬氨酸后，两个拷贝都携带时与镰刀型贫血相关；只携带一个拷贝时通常没有明显症状，在疟疾流行地区甚至可能具有生存优势——同一突变在不同遗传背景与环境下意义截然不同。",
   build: (wt) =>
     wt.slice(18, 21) === "GAG" ? { subs: { 19: "T" }, dels: [], inserts: {} } : null
 };
