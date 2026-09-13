@@ -440,6 +440,20 @@ function GeneticsPage({
         </div>
       </section>
 
+      <section className="mendel-banner">
+        <div className="mendel-banner-copy">
+          <p className="eyebrow">MENDEL SIMULATOR / 遗传规律</p>
+          <h2>孟德尔遗传规律模拟器</h2>
+          <p>
+            选择亲本的基因型（AA / Aa / aa），在遗传棋盘格中追踪每一次配子结合，
+            并以概率图查看后代的基因型比与表型比。内置豌豆杂交、测交、自由组合等经典案例。
+          </p>
+        </div>
+        <button className="mendel-banner-cta" onClick={() => onNavigate("mendel")}>
+          进入模拟器 <ArrowUpRight size={17} />
+        </button>
+      </section>
+
       <section className="genetics-explorer">
         <div className="section-intro">
           <p className="eyebrow">HIERARCHY / 层级模型</p>

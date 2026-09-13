@@ -14,12 +14,14 @@ import {
 } from "lucide-react";
 import { api, type Knowledge, type Topic } from "./api";
 import GeneticsPage from "./Genetics";
+import MendelSimulator from "./MendelSimulator";
 
 type Page =
   | { kind: "home" }
   | { kind: "topic"; slug: string }
   | { kind: "entry"; slug: string }
-  | { kind: "genetics"; sub?: string; slug?: string };
+  | { kind: "genetics"; sub?: string; slug?: string }
+  | { kind: "mendel" };
 
 const iconMap = {
   "circle-dot": CircleDot,
@@ -42,6 +44,7 @@ const routeFromHash = (): Page => {
   const [kind, first, second] = window.location.hash.slice(1).split("/");
   if (kind === "topic" && first) return { kind: "topic", slug: first };
   if (kind === "entry" && first) return { kind: "entry", slug: first };
+  if (kind === "mendel") return { kind: "mendel" };
   if (kind === "genetics") return { kind: "genetics", sub: first, slug: second };
   return { kind: "home" };
 };
@@ -91,6 +94,7 @@ function App() {
       {page.kind === "genetics" && (
         <GeneticsPage sub={page.sub} slug={page.slug} onNavigate={navigate} />
       )}
+      {page.kind === "mendel" && <MendelSimulator onNavigate={navigate} />}
       {searchOpen && (
         <SearchDialog
           topics={topics}
@@ -133,6 +137,7 @@ function Header({
           </button>
         ))}
         <button onClick={() => onNavigate("genetics")}>遗传实验室</button>
+        <button onClick={() => onNavigate("mendel")}>孟德尔模拟器</button>
       </nav>
       <div className="header-actions">
         <button className="icon-button" aria-label="搜索" onClick={onSearch}>
