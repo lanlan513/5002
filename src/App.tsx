@@ -15,13 +15,15 @@ import {
 import { api, type Knowledge, type Topic } from "./api";
 import GeneticsPage from "./Genetics";
 import MendelSimulator from "./MendelSimulator";
+import MutationLab from "./MutationLab";
 
 type Page =
   | { kind: "home" }
   | { kind: "topic"; slug: string }
   | { kind: "entry"; slug: string }
   | { kind: "genetics"; sub?: string; slug?: string }
-  | { kind: "mendel" };
+  | { kind: "mendel" }
+  | { kind: "mutation"; geneSlug?: string };
 
 const iconMap = {
   "circle-dot": CircleDot,
@@ -45,6 +47,7 @@ const routeFromHash = (): Page => {
   if (kind === "topic" && first) return { kind: "topic", slug: first };
   if (kind === "entry" && first) return { kind: "entry", slug: first };
   if (kind === "mendel") return { kind: "mendel" };
+  if (kind === "mutation") return { kind: "mutation", geneSlug: first };
   if (kind === "genetics") return { kind: "genetics", sub: first, slug: second };
   return { kind: "home" };
 };
@@ -95,6 +98,9 @@ function App() {
         <GeneticsPage sub={page.sub} slug={page.slug} onNavigate={navigate} />
       )}
       {page.kind === "mendel" && <MendelSimulator onNavigate={navigate} />}
+      {page.kind === "mutation" && (
+        <MutationLab geneSlug={page.geneSlug} onNavigate={navigate} />
+      )}
       {searchOpen && (
         <SearchDialog
           topics={topics}
@@ -138,6 +144,7 @@ function Header({
         ))}
         <button onClick={() => onNavigate("genetics")}>遗传实验室</button>
         <button onClick={() => onNavigate("mendel")}>孟德尔模拟器</button>
+        <button onClick={() => onNavigate("mutation")}>突变实验室</button>
       </nav>
       <div className="header-actions">
         <button className="icon-button" aria-label="搜索" onClick={onSearch}>

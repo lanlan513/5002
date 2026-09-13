@@ -454,6 +454,20 @@ function GeneticsPage({
         </button>
       </section>
 
+      <section className="mendel-banner mutation-banner">
+        <div className="mendel-banner-copy">
+          <p className="eyebrow">MUTATION LAB / 中心法则</p>
+          <h2>DNA 突变与基因表达实验室</h2>
+          <p>
+            修改一段 DNA 序列，实时观察转录与翻译过程中的变化：同义、错义、无义、移码……
+            并与正常序列逐碱基、逐密码子对比，理解碱基变化可能带来的影响。
+          </p>
+        </div>
+        <button className="mendel-banner-cta" onClick={() => onNavigate("mutation")}>
+          进入突变实验室 <ArrowUpRight size={17} />
+        </button>
+      </section>
+
       <section className="genetics-explorer">
         <div className="section-intro">
           <p className="eyebrow">HIERARCHY / 层级模型</p>
@@ -545,9 +559,14 @@ function GeneticsPage({
                 <span className="gene-symbol-large">{gene.symbol}</span>
                 <h3>{gene.name}</h3>
               </div>
-              <button className="text-command" onClick={() => focusHelix()}>
-                在双螺旋中查看 <ArrowUpRight size={16} />
-              </button>
+              <div className="gene-actions">
+                <button className="text-command" onClick={() => focusHelix()}>
+                  在双螺旋中查看 <ArrowUpRight size={16} />
+                </button>
+                <button className="text-command" onClick={() => onNavigate(`mutation/${gene.slug}`)}>
+                  在突变实验室中编辑 <ArrowUpRight size={16} />
+                </button>
+              </div>
             </header>
             <div className="gene-meta">
               <span>{gene.chromosome_name} · {gene.location}</span>
