@@ -59,3 +59,22 @@ export interface TimelineEventSeed {
   kind: "origin" | "transition" | "radiation" | "extinction" | "impact";
   description: string;
 }
+
+export interface TaxonNodeSeed {
+  slug: string;
+  parentSlug: string | null;
+  name: string;
+  latin: string;
+  rank: string;
+  kind: "clade" | "species";
+  nodeOrder: number;
+  divergenceMya: number;
+  eraSlug: string;
+  organismSlug?: string | null;
+  icon: string;
+  color: string;
+  traits: string;
+  description: string;
+  relationships: string;
+  defaultExpanded: boolean;
+}

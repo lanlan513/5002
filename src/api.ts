@@ -59,10 +59,34 @@ export type TimelineEvent = {
   description: string;
 };
 
+export type TaxonNode = {
+  id: number;
+  slug: string;
+  parent_slug: string | null;
+  name: string;
+  latin: string;
+  rank: string;
+  kind: "clade" | "species";
+  node_order: number;
+  divergence_mya: number;
+  era_slug: string;
+  organism_slug: string | null;
+  icon: string;
+  color: string;
+  traits: string;
+  description: string;
+  relationships: string;
+  default_expanded: number;
+};
+
 export type Timeline = {
   eras: Era[];
   organisms: Organism[];
   events: TimelineEvent[];
+};
+
+export type Phylogeny = Timeline & {
+  nodes: TaxonNode[];
 };
 
 const getJson = async <T>(path: string): Promise<T> => {
@@ -77,6 +101,7 @@ export const api = {
   topic: (slug: string) => getJson<Topic & { knowledge: Knowledge[] }>(`/api/topics/${slug}`),
   entry: (slug: string) => getJson<Knowledge>(`/api/knowledge/${slug}`),
   timeline: () => getJson<Timeline>("/api/timeline"),
+  phylogeny: () => getJson<Phylogeny>("/api/phylogeny"),
   track: (entityType: string, entitySlug: string) =>
     fetch("/api/interactions", {
       method: "POST",

@@ -16,6 +16,7 @@ import {
   Flame,
   Flower2,
   Footprints,
+  GitFork,
   Hourglass,
   Layers,
   Leaf,
@@ -37,6 +38,8 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { api, type Era, type Organism, type Timeline, type TimelineEvent } from "./api";
+
+export type TimelineFocus = { type: "organism" | "era"; slug: string } | null;
 
 /* ------------------------------------------------------------------ */
 /* 深时标尺：把“百万年前”映射到 log10 坐标，46 亿年压缩进一条可缩放的轴 */
@@ -143,7 +146,7 @@ const tintFor = (center: number) => {
   return `radial-gradient(circle at 50% 40%, rgba(${r}, ${g}, ${b}, .6), transparent 65%)`;
 };
 
-function TimelinePage({ onNavigate }: { onNavigate: (to: string) => void }) {
+function TimelinePage({ onNavigate, initialFocus = null }: { onNavigate: (to: string) => void; initialFocus?: TimelineFocus }) {
   const [data, setData] = useState<Timeline | null>(null);
   const [view, setView] = useState<View>({ center: (LOG_MIN + LOG_MAX) / 2, scale: 240 });
   const [selection, setSelection] = useState<Selection>(null);
@@ -158,6 +161,8 @@ function TimelinePage({ onNavigate }: { onNavigate: (to: string) => void }) {
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const dragRef = useRef<{ startX: number; startCenter: number; moved: number } | null>(null);
   const pinchRef = useRef<{ center: number; scale: number; midX: number; dist: number } | null>(null);
+  const initialFocusRef = useRef(initialFocus);
+  const initialFocusDoneRef = useRef(false);
 
   const applyView = useCallback((v: View) => {
     viewRef.current = v;
@@ -226,7 +231,7 @@ function TimelinePage({ onNavigate }: { onNavigate: (to: string) => void }) {
   /* 入场：从“人类黎明”缓缓拉远，直到 46 亿年全貌展开（可重入，StrictMode 安全） */
   const width = stageSize.width;
   useEffect(() => {
-    if (!width || introDoneRef.current || animRef.current) return;
+    if (!width || introDoneRef.current || animRef.current || initialFocusRef.current) return;
     applyView(clampView({ center: Math.log10(0.5), scale: width / 1.5 }, width));
     animateTo({ center: (LOG_MIN + LOG_MAX) / 2, scale: width / (LOG_SPAN * 1.06) }, 2400, () => {
       introDoneRef.current = true;
@@ -377,6 +382,35 @@ function TimelinePage({ onNavigate }: { onNavigate: (to: string) => void }) {
     const lo = logOf(Math.max(era.end_mya, MIN_MYA));
     animateTo({ center: (hi + lo) / 2, scale: w / ((hi - lo) * 1.3) }, 950);
   };
+
+  useEffect(() => {
+    if (!data || !width || initialFocusDoneRef.current) return;
+    const focus = initialFocusRef.current;
+    initialFocusDoneRef.current = true;
+    initialFocusRef.current = null;
+    introDoneRef.current = true;
+
+    if (focus?.type === "organism") {
+      const organism = data.organisms.find((item) => item.slug === focus.slug);
+      if (organism) {
+        applyView(clampView({ center: logOf(organism.mya), scale: width / 1.4 }, width));
+        setSelection({ type: "organism", slug: organism.slug });
+        void api.track("organism", organism.slug);
+      }
+      return;
+    }
+
+    if (focus?.type === "era") {
+      const era = data.eras.find((item) => item.slug === focus.slug);
+      if (era) {
+        const hi = logOf(era.start_mya);
+        const lo = logOf(Math.max(era.end_mya, MIN_MYA));
+        applyView(clampView({ center: (hi + lo) / 2, scale: width / ((hi - lo) * 1.3) }, width));
+        setSelection({ type: "era", slug: era.slug });
+        void api.track("era", era.slug);
+      }
+    }
+  }, [data, width, applyView, clampView]);
 
   const select = (sel: NonNullable<Selection>) => {
     setSelection(sel);
@@ -735,6 +769,7 @@ function TimelinePage({ onNavigate }: { onNavigate: (to: string) => void }) {
           onSelect={select}
           onFocusEra={focusEra}
           onFocusMya={focusMya}
+          onNavigate={onNavigate}
         />
       )}
     </section>
@@ -749,7 +784,8 @@ function DetailPanel({
   onClose,
   onSelect,
   onFocusEra,
-  onFocusMya
+  onFocusMya,
+  onNavigate
 }: {
   selection: NonNullable<Selection>;
   data: Timeline;
@@ -757,6 +793,7 @@ function DetailPanel({
   onSelect: (sel: NonNullable<Selection>) => void;
   onFocusEra: (era: Era) => void;
   onFocusMya: (mya: number, span?: number) => void;
+  onNavigate: (to: string) => void;
 }) {
   if (selection.type === "era") {
     const era = data.eras.find((e) => e.slug === selection.slug);
@@ -822,9 +859,14 @@ function DetailPanel({
             ))}
           </div>
         </section>
-        <button className="tl-panel-focus" onClick={() => onFocusEra(era)}>
-          <Crosshair size={15} /> 聚焦这个时代
-        </button>
+        <div className="tl-panel-actions">
+          <button onClick={() => onFocusEra(era)}>
+            <Crosshair size={14} /> 聚焦这个时代
+          </button>
+          <button onClick={() => onNavigate(`phylogeny/era/${era.slug}`)}>
+            <GitFork size={14} /> 高亮对应分支
+          </button>
+        </div>
       </aside>
     );
   }
@@ -860,6 +902,9 @@ function DetailPanel({
         <div className="tl-panel-actions">
           <button onClick={() => onFocusMya(o.mya, 1.4)}>
             <Crosshair size={14} /> 在时间上定位
+          </button>
+          <button onClick={() => onNavigate(`phylogeny/organism/${o.slug}`)}>
+            <GitFork size={14} /> 查看演化位置
           </button>
           {era && (
             <button onClick={() => onSelect({ type: "era", slug: era.slug })}>所属时代 · {era.name}</button>

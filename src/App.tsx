@@ -13,9 +13,15 @@ import {
   X
 } from "lucide-react";
 import { api, type Knowledge, type Topic } from "./api";
-import TimelinePage from "./TimelinePage";
+import TimelinePage, { type TimelineFocus } from "./TimelinePage";
+import PhylogenyPage, { type PhylogenyFocus } from "./PhylogenyPage";
 
-type Page = { kind: "home" } | { kind: "topic"; slug: string } | { kind: "entry"; slug: string } | { kind: "timeline" };
+type Page =
+  | { kind: "home" }
+  | { kind: "topic"; slug: string }
+  | { kind: "entry"; slug: string }
+  | { kind: "timeline"; focus: TimelineFocus }
+  | { kind: "phylogeny"; focus: PhylogenyFocus };
 
 const iconMap = {
   "circle-dot": CircleDot,
@@ -35,10 +41,12 @@ const scaleLabels: Record<string, string> = {
 };
 
 const routeFromHash = (): Page => {
-  const [kind, slug] = window.location.hash.slice(1).split("/");
+  const [kind, slug, focusType, focusSlug] = window.location.hash.slice(1).split("/");
+  const focus = focusType && focusSlug ? { type: focusType as "organism" | "era", slug: focusSlug } : null;
   if (kind === "topic" && slug) return { kind: "topic", slug };
   if (kind === "entry" && slug) return { kind: "entry", slug };
-  if (kind === "timeline") return { kind: "timeline" };
+  if (kind === "timeline") return { kind: "timeline", focus };
+  if (kind === "phylogeny") return { kind: "phylogeny", focus };
   return { kind: "home" };
 };
 
@@ -82,7 +90,12 @@ function App() {
       {page.kind === "home" && (
         <Home topics={topics} featured={featured} onNavigate={navigate} />
       )}
-      {page.kind === "timeline" && <TimelinePage onNavigate={navigate} />}
+      {page.kind === "timeline" && (
+        <TimelinePage key={window.location.hash} onNavigate={navigate} initialFocus={page.focus} />
+      )}
+      {page.kind === "phylogeny" && (
+        <PhylogenyPage key={window.location.hash} onNavigate={navigate} initialFocus={page.focus} />
+      )}
       {page.kind === "topic" && <TopicPage slug={page.slug} onNavigate={navigate} />}
       {page.kind === "entry" && <EntryPage slug={page.slug} onNavigate={navigate} />}
       {searchOpen && (
@@ -121,6 +134,7 @@ function Header({
       </button>
       <nav className={mobileMenu ? "primary-nav is-open" : "primary-nav"}>
         <button onClick={() => onNavigate("")}>探索</button>
+        <button onClick={() => onNavigate("phylogeny")}>系统树</button>
         <button onClick={() => onNavigate("timeline")}>时间轴</button>
         {topics.slice(0, 3).map((topic) => (
           <button key={topic.slug} onClick={() => onNavigate(`topic/${topic.slug}`)}>
@@ -219,9 +233,14 @@ function Home({
             从冥古宙的岩浆海到人类世的城市灯火——在对数深时标尺上拖动、缩放、点击，
             穿越寒武纪的大爆发、恐龙王朝与每一次大灭绝，看代表性生物随时间位置浮现。
           </p>
-          <button className="text-command" onClick={() => onNavigate("timeline")}>
-            进入演化时间轴 <ArrowUpRight size={17} />
-          </button>
+          <div className="deeptime-actions">
+            <button className="text-command" onClick={() => onNavigate("phylogeny")}>
+              进入系统发育树 <ArrowUpRight size={17} />
+            </button>
+            <button className="text-command" onClick={() => onNavigate("timeline")}>
+              进入演化时间轴 <ArrowUpRight size={17} />
+            </button>
+          </div>
         </div>
         <div className="deeptime-strip" aria-hidden="true" onClick={() => onNavigate("timeline")}>
           <div className="deeptime-ticks">

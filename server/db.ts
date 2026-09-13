@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import { taxonNodes } from "./phylogenySeed.js";
 import { eras, knowledge, organisms, timelineEvents, topics } from "./seed.js";
 
 const db = new Database("biolab.db");
@@ -82,6 +83,26 @@ db.exec(`
     kind TEXT NOT NULL,
     description TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS taxon_nodes (
+    id INTEGER PRIMARY KEY,
+    slug TEXT UNIQUE NOT NULL,
+    parent_slug TEXT REFERENCES taxon_nodes(slug) ON DELETE SET NULL,
+    name TEXT NOT NULL,
+    latin TEXT NOT NULL,
+    rank TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    node_order INTEGER NOT NULL,
+    divergence_mya REAL NOT NULL,
+    era_slug TEXT NOT NULL REFERENCES eras(slug),
+    organism_slug TEXT REFERENCES organisms(slug) ON DELETE SET NULL,
+    icon TEXT NOT NULL,
+    color TEXT NOT NULL,
+    traits TEXT NOT NULL,
+    description TEXT NOT NULL,
+    relationships TEXT NOT NULL,
+    default_expanded INTEGER NOT NULL DEFAULT 0
+  );
 `);
 
 const hasTopics = db.prepare("SELECT COUNT(*) AS count FROM topics").get() as { count: number };
@@ -120,6 +141,26 @@ if (hasEras.count === 0) {
     eras.forEach((era) => insertEra.run(era));
     organisms.forEach((organism) => insertOrganism.run(organism));
     timelineEvents.forEach((event) => insertEvent.run(event));
+  })();
+}
+
+const hasTaxonNodes = db.prepare("SELECT COUNT(*) AS count FROM taxon_nodes").get() as { count: number };
+if (hasTaxonNodes.count === 0) {
+  const insertTaxonNode = db.prepare(`
+    INSERT INTO taxon_nodes (
+      slug, parent_slug, name, latin, rank, kind, node_order, divergence_mya,
+      era_slug, organism_slug, icon, color, traits, description, relationships, default_expanded
+    )
+    VALUES (
+      @slug, @parentSlug, @name, @latin, @rank, @kind, @nodeOrder, @divergenceMya,
+      @eraSlug, @organismSlug, @icon, @color, @traits, @description, @relationships, @defaultExpanded
+    )
+  `);
+
+  db.transaction(() => {
+    taxonNodes.forEach((node) =>
+      insertTaxonNode.run({ ...node, organismSlug: node.organismSlug ?? null, defaultExpanded: node.defaultExpanded ? 1 : 0 })
+    );
   })();
 }
 
