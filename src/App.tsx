@@ -41,12 +41,23 @@ const scaleLabels: Record<string, string> = {
 };
 
 const routeFromHash = (): Page => {
-  const [kind, slug, focusType, focusSlug] = window.location.hash.slice(1).split("/");
-  const focus = focusType && focusSlug ? { type: focusType as "organism" | "era", slug: focusSlug } : null;
-  if (kind === "topic" && slug) return { kind: "topic", slug };
-  if (kind === "entry" && slug) return { kind: "entry", slug };
-  if (kind === "timeline") return { kind: "timeline", focus };
-  if (kind === "phylogeny") return { kind: "phylogeny", focus };
+  const [kind, slugOrFocusType, focusSlug] = window.location.hash.slice(1).split("/");
+  if (kind === "topic" && slugOrFocusType) return { kind: "topic", slug: slugOrFocusType };
+  if (kind === "entry" && slugOrFocusType) return { kind: "entry", slug: slugOrFocusType };
+
+  if (kind === "timeline" && slugOrFocusType && focusSlug) {
+    if (slugOrFocusType === "organism" || slugOrFocusType === "era") {
+      return { kind: "timeline", focus: { type: slugOrFocusType, slug: focusSlug } };
+    }
+  }
+  if (kind === "phylogeny" && slugOrFocusType && focusSlug) {
+    if (slugOrFocusType === "organism" || slugOrFocusType === "era") {
+      return { kind: "phylogeny", focus: { type: slugOrFocusType, slug: focusSlug } };
+    }
+  }
+  if (kind === "timeline") return { kind: "timeline", focus: null };
+  if (kind === "phylogeny") return { kind: "phylogeny", focus: null };
+
   return { kind: "home" };
 };
 
