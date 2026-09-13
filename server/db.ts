@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { knowledge, topics } from "./seed.js";
+import { eras, knowledge, organisms, timelineEvents, topics } from "./seed.js";
 
 const db = new Database("biolab.db");
 db.pragma("journal_mode = WAL");
@@ -46,6 +46,42 @@ db.exec(`
     entity_slug TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS eras (
+    id INTEGER PRIMARY KEY,
+    slug TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    name_en TEXT NOT NULL,
+    rank TEXT NOT NULL,
+    start_mya REAL NOT NULL,
+    end_mya REAL NOT NULL,
+    color TEXT NOT NULL,
+    tagline TEXT NOT NULL,
+    environment TEXT NOT NULL,
+    position INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS organisms (
+    id INTEGER PRIMARY KEY,
+    slug TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    latin TEXT NOT NULL,
+    mya REAL NOT NULL,
+    era_slug TEXT NOT NULL REFERENCES eras(slug),
+    category TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    description TEXT NOT NULL,
+    prominence INTEGER NOT NULL DEFAULT 2
+  );
+
+  CREATE TABLE IF NOT EXISTS timeline_events (
+    id INTEGER PRIMARY KEY,
+    slug TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    mya REAL NOT NULL,
+    kind TEXT NOT NULL,
+    description TEXT NOT NULL
+  );
 `);
 
 const hasTopics = db.prepare("SELECT COUNT(*) AS count FROM topics").get() as { count: number };
@@ -62,6 +98,28 @@ if (hasTopics.count === 0) {
   db.transaction(() => {
     topics.forEach((topic) => insertTopic.run(topic));
     knowledge.forEach((item) => insertKnowledge.run({ ...item, featured: item.featured ? 1 : 0 }));
+  })();
+}
+
+const hasEras = db.prepare("SELECT COUNT(*) AS count FROM eras").get() as { count: number };
+if (hasEras.count === 0) {
+  const insertEra = db.prepare(`
+    INSERT INTO eras (slug, name, name_en, rank, start_mya, end_mya, color, tagline, environment, position)
+    VALUES (@slug, @name, @nameEn, @rank, @startMya, @endMya, @color, @tagline, @environment, @position)
+  `);
+  const insertOrganism = db.prepare(`
+    INSERT INTO organisms (slug, name, latin, mya, era_slug, category, icon, description, prominence)
+    VALUES (@slug, @name, @latin, @mya, @eraSlug, @category, @icon, @description, @prominence)
+  `);
+  const insertEvent = db.prepare(`
+    INSERT INTO timeline_events (slug, title, mya, kind, description)
+    VALUES (@slug, @title, @mya, @kind, @description)
+  `);
+
+  db.transaction(() => {
+    eras.forEach((era) => insertEra.run(era));
+    organisms.forEach((organism) => insertOrganism.run(organism));
+    timelineEvents.forEach((event) => insertEvent.run(event));
   })();
 }
 

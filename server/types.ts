@@ -26,3 +26,36 @@ export interface KnowledgeSeed {
   readTime: number;
   featured: boolean;
 }
+
+export interface EraSeed {
+  slug: string;
+  name: string;
+  nameEn: string;
+  rank: "宙" | "代";
+  startMya: number;
+  endMya: number;
+  color: string;
+  tagline: string;
+  environment: string;
+  position: number;
+}
+
+export interface OrganismSeed {
+  slug: string;
+  name: string;
+  latin: string;
+  mya: number;
+  eraSlug: string;
+  category: string;
+  icon: string;
+  description: string;
+  prominence: number;
+}
+
+export interface TimelineEventSeed {
+  slug: string;
+  title: string;
+  mya: number;
+  kind: "origin" | "transition" | "radiation" | "extinction" | "impact";
+  description: string;
+}

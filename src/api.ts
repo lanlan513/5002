@@ -23,6 +23,48 @@ export type Knowledge = {
   featured: number;
 };
 
+export type Era = {
+  id: number;
+  slug: string;
+  name: string;
+  name_en: string;
+  rank: string;
+  start_mya: number;
+  end_mya: number;
+  color: string;
+  tagline: string;
+  environment: string;
+  position: number;
+};
+
+export type Organism = {
+  id: number;
+  slug: string;
+  name: string;
+  latin: string;
+  mya: number;
+  era_slug: string;
+  category: string;
+  icon: string;
+  description: string;
+  prominence: number;
+};
+
+export type TimelineEvent = {
+  id: number;
+  slug: string;
+  title: string;
+  mya: number;
+  kind: "origin" | "transition" | "radiation" | "extinction" | "impact";
+  description: string;
+};
+
+export type Timeline = {
+  eras: Era[];
+  organisms: Organism[];
+  events: TimelineEvent[];
+};
+
 const getJson = async <T>(path: string): Promise<T> => {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
@@ -34,6 +76,7 @@ export const api = {
   knowledge: () => getJson<Knowledge[]>("/api/knowledge?featured=true"),
   topic: (slug: string) => getJson<Topic & { knowledge: Knowledge[] }>(`/api/topics/${slug}`),
   entry: (slug: string) => getJson<Knowledge>(`/api/knowledge/${slug}`),
+  timeline: () => getJson<Timeline>("/api/timeline"),
   track: (entityType: string, entitySlug: string) =>
     fetch("/api/interactions", {
       method: "POST",

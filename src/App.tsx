@@ -13,8 +13,9 @@ import {
   X
 } from "lucide-react";
 import { api, type Knowledge, type Topic } from "./api";
+import TimelinePage from "./TimelinePage";
 
-type Page = { kind: "home" } | { kind: "topic"; slug: string } | { kind: "entry"; slug: string };
+type Page = { kind: "home" } | { kind: "topic"; slug: string } | { kind: "entry"; slug: string } | { kind: "timeline" };
 
 const iconMap = {
   "circle-dot": CircleDot,
@@ -37,6 +38,7 @@ const routeFromHash = (): Page => {
   const [kind, slug] = window.location.hash.slice(1).split("/");
   if (kind === "topic" && slug) return { kind: "topic", slug };
   if (kind === "entry" && slug) return { kind: "entry", slug };
+  if (kind === "timeline") return { kind: "timeline" };
   return { kind: "home" };
 };
 
@@ -80,6 +82,7 @@ function App() {
       {page.kind === "home" && (
         <Home topics={topics} featured={featured} onNavigate={navigate} />
       )}
+      {page.kind === "timeline" && <TimelinePage onNavigate={navigate} />}
       {page.kind === "topic" && <TopicPage slug={page.slug} onNavigate={navigate} />}
       {page.kind === "entry" && <EntryPage slug={page.slug} onNavigate={navigate} />}
       {searchOpen && (
@@ -118,6 +121,7 @@ function Header({
       </button>
       <nav className={mobileMenu ? "primary-nav is-open" : "primary-nav"}>
         <button onClick={() => onNavigate("")}>探索</button>
+        <button onClick={() => onNavigate("timeline")}>时间轴</button>
         {topics.slice(0, 3).map((topic) => (
           <button key={topic.slug} onClick={() => onNavigate(`topic/${topic.slug}`)}>
             {topic.short_name}
@@ -204,6 +208,37 @@ function Home({
           <div className="map-line line-a" />
           <div className="map-line line-b" />
           <div className="map-line line-c" />
+        </div>
+      </section>
+
+      <section className="deeptime-section">
+        <div className="deeptime-copy">
+          <p className="eyebrow">DEEP TIME ATLAS</p>
+          <h2>把 46 亿年，铺成一条可以拖动的时间河</h2>
+          <p>
+            从冥古宙的岩浆海到人类世的城市灯火——在对数深时标尺上拖动、缩放、点击，
+            穿越寒武纪的大爆发、恐龙王朝与每一次大灭绝，看代表性生物随时间位置浮现。
+          </p>
+          <button className="text-command" onClick={() => onNavigate("timeline")}>
+            进入演化时间轴 <ArrowUpRight size={17} />
+          </button>
+        </div>
+        <div className="deeptime-strip" aria-hidden="true" onClick={() => onNavigate("timeline")}>
+          <div className="deeptime-ticks">
+            <span style={{ left: "0%" }}>46亿年前</span>
+            <span style={{ left: "9.5%" }}>10亿</span>
+            <span style={{ left: "23.9%" }}>1亿</span>
+            <span style={{ left: "52.6%" }}>100万</span>
+            <span style={{ left: "81.3%" }}>1万</span>
+            <span style={{ left: "100%" }}>现在</span>
+          </div>
+          <div className="deeptime-bar" />
+          <div className="deeptime-eras">
+            <span style={{ left: "8.5%" }}>元古宙</span>
+            <span style={{ left: "15.7%" }}>古生代</span>
+            <span style={{ left: "22.3%" }}>中生代</span>
+            <span style={{ left: "62%" }}>新生代</span>
+          </div>
         </div>
       </section>
 

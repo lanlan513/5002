@@ -59,6 +59,13 @@ app.get("/api/knowledge/:slug", (request, response) => {
   response.json(entry);
 });
 
+app.get("/api/timeline", (_request, response) => {
+  const eraRows = db.prepare("SELECT * FROM eras ORDER BY position").all();
+  const organismRows = db.prepare("SELECT * FROM organisms ORDER BY mya DESC").all();
+  const eventRows = db.prepare("SELECT * FROM timeline_events ORDER BY mya DESC").all();
+  response.json({ eras: eraRows, organisms: organismRows, events: eventRows });
+});
+
 app.post("/api/interactions", (request, response) => {
   const { sessionId, eventType, entityType, entitySlug } = request.body ?? {};
   if (![sessionId, eventType, entityType, entitySlug].every((value) => typeof value === "string")) {
