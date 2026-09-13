@@ -7,14 +7,16 @@ import {
   GitFork,
   HeartPulse,
   Menu,
+  Microscope,
   Network,
   Orbit,
   Search,
   X
 } from "lucide-react";
 import { api, type Knowledge, type Topic } from "./api";
+import CellExplorer from "./explorer/CellExplorer";
 
-type Page = { kind: "home" } | { kind: "topic"; slug: string } | { kind: "entry"; slug: string };
+type Page = { kind: "home" } | { kind: "topic"; slug: string } | { kind: "entry"; slug: string } | { kind: "explorer" };
 
 const iconMap = {
   "circle-dot": CircleDot,
@@ -35,6 +37,7 @@ const scaleLabels: Record<string, string> = {
 
 const routeFromHash = (): Page => {
   const [kind, slug] = window.location.hash.slice(1).split("/");
+  if (kind === "explorer") return { kind: "explorer" };
   if (kind === "topic" && slug) return { kind: "topic", slug };
   if (kind === "entry" && slug) return { kind: "entry", slug };
   return { kind: "home" };
@@ -80,6 +83,7 @@ function App() {
       {page.kind === "home" && (
         <Home topics={topics} featured={featured} onNavigate={navigate} />
       )}
+      {page.kind === "explorer" && <CellExplorer onNavigate={navigate} />}
       {page.kind === "topic" && <TopicPage slug={page.slug} onNavigate={navigate} />}
       {page.kind === "entry" && <EntryPage slug={page.slug} onNavigate={navigate} />}
       {searchOpen && (
@@ -118,6 +122,7 @@ function Header({
       </button>
       <nav className={mobileMenu ? "primary-nav is-open" : "primary-nav"}>
         <button onClick={() => onNavigate("")}>探索</button>
+        <button onClick={() => onNavigate("explorer")}>细胞探索器</button>
         {topics.slice(0, 3).map((topic) => (
           <button key={topic.slug} onClick={() => onNavigate(`topic/${topic.slug}`)}>
             {topic.short_name}
@@ -163,9 +168,14 @@ function Home({
           <p className="hero-lede">
             BioLab 将细胞、基因、生态与人体置于同一张不断生长的生命网络中。
           </p>
-          <button className="text-command" onClick={() => document.getElementById("scales")?.scrollIntoView({ behavior: "smooth" })}>
-            选择你的观察尺度 <ArrowUpRight size={17} />
-          </button>
+          <div className="hero-actions">
+            <button className="text-command" onClick={() => document.getElementById("scales")?.scrollIntoView({ behavior: "smooth" })}>
+              选择你的观察尺度 <ArrowUpRight size={17} />
+            </button>
+            <button className="text-command hero-cta" onClick={() => onNavigate("explorer")}>
+              <Microscope size={16} /> 进入细胞探索器
+            </button>
+          </div>
         </div>
         <div className="field-readout">
           <span>当前焦点</span>
@@ -312,6 +322,16 @@ function TopicPage({ slug, onNavigate }: { slug: string; onNavigate: (to: string
         <p>{topic.description}</p>
       </div>
       <div className="topic-content">
+        {slug === "cells" && (
+          <button className="explorer-cta" onClick={() => onNavigate("explorer")}>
+            <span className="explorer-cta-icon"><Microscope size={22} strokeWidth={1.6} /></span>
+            <span className="explorer-cta-text">
+              <strong>细胞探索器</strong>
+              <small>可缩放、可点击的细胞结构图 —— 对比动物、植物与原核细胞</small>
+            </span>
+            <ArrowUpRight size={18} />
+          </button>
+        )}
         <div className="topic-aside">
           <span>知识条目</span>
           <strong>{String(topic.knowledge.length).padStart(2, "0")}</strong>

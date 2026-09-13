@@ -59,6 +59,113 @@ app.get("/api/knowledge/:slug", (request, response) => {
   response.json(entry);
 });
 
+/* ---------- 细胞探索器 API ---------- */
+
+interface CellRow {
+  id: string;
+  name: string;
+  english_name: string;
+  icon: string;
+  description: string;
+  features: string;
+  view_box: string;
+  position: number;
+}
+
+interface StructureRow {
+  organelle_id: string;
+  organelle_name: string;
+  label_x: number | null;
+  label_y: number | null;
+  shapes: string;
+  z_index: number;
+}
+
+interface OrganelleRow {
+  id: string;
+  name: string;
+  english_name: string;
+  function: string;
+  location: string;
+  knowledge: string;
+}
+
+const parseCell = (row: CellRow) => ({
+  id: row.id,
+  name: row.name,
+  englishName: row.english_name,
+  icon: row.icon,
+  description: row.description,
+  features: JSON.parse(row.features) as string[],
+  viewBox: JSON.parse(row.view_box) as { x: number; y: number; w: number; h: number }
+});
+
+/** 细胞类型列表（含每种细胞的结构清单，供切换与对比使用） */
+app.get("/api/cells", (_request, response) => {
+  const cells = (db.prepare("SELECT * FROM cell_types ORDER BY position").all() as CellRow[]).map(parseCell);
+  const structures = db
+    .prepare(`
+      SELECT cs.cell_id, cs.organelle_id, o.name
+      FROM cell_structures cs JOIN organelles o ON o.id = cs.organelle_id
+      ORDER BY cs.z_index
+    `)
+    .all() as Array<{ cell_id: string; organelle_id: string; name: string }>;
+
+  response.json({
+    cells: cells.map((cell) => ({
+      ...cell,
+      organelles: structures
+        .filter((s) => s.cell_id === cell.id)
+        .map((s) => ({ id: s.organelle_id, name: s.name }))
+    }))
+  });
+});
+
+/** 某种细胞的完整结构图（含每个细胞器的 SVG 图形与标签位置） */
+app.get("/api/cells/:id", (request, response) => {
+  const row = db.prepare("SELECT * FROM cell_types WHERE id = ?").get(request.params.id) as CellRow | undefined;
+  if (!row) return response.status(404).json({ message: "未找到该细胞类型" });
+
+  const structures = db
+    .prepare(`
+      SELECT cs.organelle_id, o.name AS organelle_name, cs.label_x, cs.label_y, cs.shapes, cs.z_index
+      FROM cell_structures cs JOIN organelles o ON o.id = cs.organelle_id
+      WHERE cs.cell_id = ?
+      ORDER BY cs.z_index
+    `)
+    .all(request.params.id) as StructureRow[];
+
+  return response.json({
+    ...parseCell(row),
+    organelles: structures.map((s) => ({
+      id: s.organelle_id,
+      name: s.organelle_name,
+      label: s.label_x !== null && s.label_y !== null ? { x: s.label_x, y: s.label_y } : undefined,
+      shapes: JSON.parse(s.shapes)
+    }))
+  });
+});
+
+/** 细胞器详情：名称、功能、位置、相关知识，以及它出现在哪些细胞中 */
+app.get("/api/organelles/:id", (request, response) => {
+  const row = db.prepare("SELECT * FROM organelles WHERE id = ?").get(request.params.id) as OrganelleRow | undefined;
+  if (!row) return response.status(404).json({ message: "未找到该细胞器" });
+
+  const presentIn = (
+    db.prepare("SELECT cell_id FROM cell_structures WHERE organelle_id = ?").all(request.params.id) as Array<{ cell_id: string }>
+  ).map((r) => r.cell_id);
+
+  return response.json({
+    id: row.id,
+    name: row.name,
+    englishName: row.english_name,
+    function: row.function,
+    location: row.location,
+    knowledge: JSON.parse(row.knowledge) as string[],
+    presentIn
+  });
+});
+
 app.post("/api/interactions", (request, response) => {
   const { sessionId, eventType, entityType, entitySlug } = request.body ?? {};
   if (![sessionId, eventType, entityType, entitySlug].every((value) => typeof value === "string")) {
