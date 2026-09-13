@@ -9,7 +9,7 @@
     "dev:api": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",
     "start": "tsx server/index.ts",
-    "lint": "tsc --noEmit"
+    "lint": "tsc -b --force"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

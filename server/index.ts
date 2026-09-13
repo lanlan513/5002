@@ -1,12 +1,15 @@
 import cors from "cors";
 import express from "express";
 import db from "./db.js";
+import ecologyApi from "./ecology-api.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 8794);
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/api", ecologyApi);
 
 app.get("/api/health", (_request, response) => {
   response.json({ status: "ok", service: "BioLab API" });

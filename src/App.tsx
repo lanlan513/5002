@@ -12,9 +12,18 @@ import {
   Search,
   X
 } from "lucide-react";
-import { api, type Knowledge, type Topic } from "./api";
+import { api, type Ecosystem, type Knowledge, type Topic } from "./api";
+import AdminPage from "./ecology/AdminPage";
+import EcosystemPage from "./ecology/EcosystemPage";
+import EcosystemsPage, { ecosystemIcon } from "./ecology/EcosystemsPage";
 
-type Page = { kind: "home" } | { kind: "topic"; slug: string } | { kind: "entry"; slug: string };
+type Page =
+  | { kind: "home" }
+  | { kind: "topic"; slug: string }
+  | { kind: "entry"; slug: string }
+  | { kind: "ecosystems" }
+  | { kind: "ecosystem"; slug: string }
+  | { kind: "ecology-admin" };
 
 const iconMap = {
   "circle-dot": CircleDot,
@@ -37,6 +46,9 @@ const routeFromHash = (): Page => {
   const [kind, slug] = window.location.hash.slice(1).split("/");
   if (kind === "topic" && slug) return { kind: "topic", slug };
   if (kind === "entry" && slug) return { kind: "entry", slug };
+  if (kind === "ecosystems") return { kind: "ecosystems" };
+  if (kind === "ecosystem" && slug) return { kind: "ecosystem", slug };
+  if (kind === "ecology-admin") return { kind: "ecology-admin" };
   return { kind: "home" };
 };
 
@@ -44,6 +56,7 @@ function App() {
   const [page, setPage] = useState<Page>(routeFromHash);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [featured, setFeatured] = useState<Knowledge[]>([]);
+  const [ecosystems, setEcosystems] = useState<Ecosystem[]>([]);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -54,10 +67,11 @@ function App() {
   }, []);
 
   useEffect(() => {
-    Promise.all([api.topics(), api.knowledge()])
-      .then(([loadedTopics, entries]) => {
+    Promise.all([api.topics(), api.knowledge(), api.ecosystems()])
+      .then(([loadedTopics, entries, loadedEcosystems]) => {
         setTopics(loadedTopics);
         setFeatured(entries);
+        setEcosystems(loadedEcosystems);
       })
       .catch(console.error);
   }, []);
@@ -78,10 +92,13 @@ function App() {
         onSearch={() => setSearchOpen(true)}
       />
       {page.kind === "home" && (
-        <Home topics={topics} featured={featured} onNavigate={navigate} />
+        <Home topics={topics} featured={featured} ecosystems={ecosystems} onNavigate={navigate} />
       )}
       {page.kind === "topic" && <TopicPage slug={page.slug} onNavigate={navigate} />}
       {page.kind === "entry" && <EntryPage slug={page.slug} onNavigate={navigate} />}
+      {page.kind === "ecosystems" && <EcosystemsPage ecosystems={ecosystems} onNavigate={navigate} />}
+      {page.kind === "ecosystem" && <EcosystemPage slug={page.slug} onNavigate={navigate} />}
+      {page.kind === "ecology-admin" && <AdminPage />}
       {searchOpen && (
         <SearchDialog
           topics={topics}
@@ -118,11 +135,13 @@ function Header({
       </button>
       <nav className={mobileMenu ? "primary-nav is-open" : "primary-nav"}>
         <button onClick={() => onNavigate("")}>探索</button>
+        <button onClick={() => onNavigate("ecosystems")}>生态系统</button>
         {topics.slice(0, 3).map((topic) => (
           <button key={topic.slug} onClick={() => onNavigate(`topic/${topic.slug}`)}>
             {topic.short_name}
           </button>
         ))}
+        <button onClick={() => onNavigate("ecology-admin")}>数据管理</button>
       </nav>
       <div className="header-actions">
         <button className="icon-button" aria-label="搜索" onClick={onSearch}>
@@ -139,10 +158,12 @@ function Header({
 function Home({
   topics,
   featured,
+  ecosystems,
   onNavigate
 }: {
   topics: Topic[];
   featured: Knowledge[];
+  ecosystems: Ecosystem[];
   onNavigate: (to: string) => void;
 }) {
   const [selected, setSelected] = useState<Topic | null>(null);
@@ -204,6 +225,32 @@ function Home({
           <div className="map-line line-a" />
           <div className="map-line line-b" />
           <div className="map-line line-c" />
+        </div>
+      </section>
+
+      <section className="eco-entry-section">
+        <div className="section-intro">
+          <p className="eyebrow">ECOSYSTEM EXPLORER</p>
+          <h2>进入一个真实的生态系统</h2>
+          <p>生产者、消费者、分解者与环境因素，在同一张网络中各就其位。</p>
+        </div>
+        <div className="eco-entry-grid">
+          {ecosystems.map((ecosystem) => {
+            const Icon = ecosystemIcon(ecosystem.icon);
+            return (
+              <button
+                key={ecosystem.slug}
+                className="eco-entry-card"
+                style={{ "--eco-color": ecosystem.color } as React.CSSProperties}
+                onClick={() => onNavigate(`ecosystem/${ecosystem.slug}`)}
+              >
+                <Icon size={24} strokeWidth={1.5} />
+                <strong>{ecosystem.name}</strong>
+                <small>{ecosystem.species_count} 物种 · {ecosystem.link_count} 关系</small>
+                <ArrowUpRight size={16} />
+              </button>
+            );
+          })}
         </div>
       </section>
 
