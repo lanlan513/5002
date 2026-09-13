@@ -3,7 +3,7 @@ import express from "express";
 import db from "./db.js";
 
 const app = express();
-const port = Number(process.env.PORT ?? 8787);
+const port = Number(process.env.PORT ?? 8796);
 
 app.use(cors());
 app.use(express.json());
