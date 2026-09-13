@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Microscope, Workflow } from "lucide-react";
 import { api } from "../api";
 import type { CellDetail, CellSummary, OrganelleDetail, RelationGraph as RelationGraphData, RelationSelection } from "../types";
@@ -148,6 +148,18 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
     [cells, goToCell, selectOrganelle]
   );
 
+  /* 当前细胞含有的细胞器 id 集合（图谱的“当前细胞视角”标注；细胞未载入时不标注） */
+  const presentOrganelleIds = useMemo(
+    () => (cell ? new Set(cell.organelles.map((organelle) => organelle.id)) : null),
+    [cell]
+  );
+
+  /** 某个细胞器首次出现的细胞名称（用于跳转按钮上明确写出目标细胞） */
+  const cellNameOf = useCallback(
+    (organelleId: string) => cells.find((item) => item.organelles.some((o) => o.id === organelleId))?.name ?? null,
+    [cells]
+  );
+
   useEffect(() => {
     let cancelled = false;
     api
@@ -184,6 +196,8 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
     setDetailError(null);
     detailSeq.current += 1;
   }, []);
+
+  const CurrentCellIcon = cell ? cellIcon(cell.icon) : null;
 
   return (
     <section className="explorer-page">
@@ -283,13 +297,20 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
                   <span className="stage-title-icon"><Workflow size={19} strokeWidth={1.8} /></span>
                   <div>
                     <strong>功能关系图谱</strong>
-                    <span>Organelle Relations</span>
+                    <span>跨细胞通用图谱</span>
                   </div>
                 </div>
-                <div className="edge-legend" aria-hidden="true">
-                  <span className="edge-legend-item"><span className="legend-line kind-information" /> 信息</span>
-                  <span className="edge-legend-item"><span className="legend-line kind-material" /> 物质</span>
-                  <span className="edge-legend-item"><span className="legend-line kind-energy" /> 能量</span>
+                <div className="stage-toolbar-right">
+                  <div className="edge-legend" aria-hidden="true">
+                    <span className="edge-legend-item"><span className="legend-line kind-information" /> 信息</span>
+                    <span className="edge-legend-item"><span className="legend-line kind-material" /> 物质</span>
+                    <span className="edge-legend-item"><span className="legend-line kind-energy" /> 能量</span>
+                  </div>
+                  {cell && CurrentCellIcon && (
+                    <span className="graph-context" title="图谱内容不随细胞切换而改变；细胞器节点以当前细胞为视角标注">
+                      <CurrentCellIcon size={13} /> 当前视角：{cell.name}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="relation-canvas-wrap">
@@ -298,6 +319,7 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
                     graph={graph}
                     selection={relSelection}
                     activeChainId={activeChainId}
+                    presentOrganelleIds={presentOrganelleIds}
                     onSelectNode={(id) => toggleRelation({ type: "node", id })}
                     onSelectEdge={(id) => toggleRelation({ type: "edge", id })}
                   />
@@ -345,6 +367,9 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
               graph={graph}
               selection={relSelection}
               activeChainId={activeChainId}
+              currentCellName={cell?.name ?? null}
+              presentOrganelleIds={presentOrganelleIds}
+              cellNameOf={cellNameOf}
               onSelectNode={(id) => toggleRelation({ type: "node", id })}
               onSelectEdge={(id) => toggleRelation({ type: "edge", id })}
               onSelectChain={selectChain}

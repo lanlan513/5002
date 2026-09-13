@@ -4,6 +4,8 @@ interface RelationGraphProps {
   graph: RelationGraphData;
   selection: RelationSelection | null;
   activeChainId: string | null;
+  /** 当前细胞含有的细胞器 id 集合；为 null 表示细胞未载入，不做“是否存在”标注 */
+  presentOrganelleIds: Set<string> | null;
   onSelectNode: (id: string) => void;
   onSelectEdge: (id: string) => void;
 }
@@ -46,7 +48,7 @@ const edgePath = (a: Point, b: Point, bend: number, r1: number, r2: number) => {
   };
 };
 
-export default function RelationGraph({ graph, selection, activeChainId, onSelectNode, onSelectEdge }: RelationGraphProps) {
+export default function RelationGraph({ graph, selection, activeChainId, presentOrganelleIds, onSelectNode, onSelectEdge }: RelationGraphProps) {
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const activeChain = graph.chains.find((chain) => chain.id === activeChainId) ?? null;
   const chainOrder = new Map((activeChain?.edgeIds ?? []).map((id, index) => [id, index]));
@@ -170,11 +172,18 @@ export default function RelationGraph({ graph, selection, activeChainId, onSelec
         const inChain = chainNodes.has(node.id);
         const dimmed = activeChain ? !inChain : !related;
         const selected = selectedNodeId === node.id;
+        /* 通用图谱中不存在于当前细胞的细胞器：虚线淡化标注 */
+        const absent =
+          node.kind === "organelle" &&
+          node.organelleId !== undefined &&
+          presentOrganelleIds !== null &&
+          !presentOrganelleIds.has(node.organelleId);
         const classes = [
           "relation-node",
           `kind-${node.kind}`,
           selected ? "is-selected" : "",
-          dimmed ? "is-dim" : ""
+          dimmed ? "is-dim" : "",
+          absent ? "is-absent" : ""
         ]
           .filter(Boolean)
           .join(" ");
@@ -186,7 +195,7 @@ export default function RelationGraph({ graph, selection, activeChainId, onSelec
             transform={`translate(${node.x} ${node.y})`}
             tabIndex={0}
             role="button"
-            aria-label={node.name}
+            aria-label={absent ? `${node.name}（不存在于当前细胞）` : node.name}
             onClick={() => onSelectNode(node.id)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {

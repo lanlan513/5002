@@ -172,6 +172,9 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 .view-toggle-btn.is-active { background: #98f0c6; color: #0a1f18; font-weight: 600; }
 
 .relation-stage { display: flex; flex-direction: column; }
+.stage-toolbar-right { display: flex; align-items: center; gap: 14px; }
+.graph-context { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid rgba(184, 232, 203, .25); border-radius: 999px; color: #cfe4d8; font-size: 11px; white-space: nowrap; }
+.graph-context svg { color: #98f0c6; }
 .edge-legend { display: flex; align-items: center; gap: 14px; }
 .edge-legend-item { display: inline-flex; align-items: center; gap: 6px; color: #8fae9e; font-size: 11px; }
 .legend-line { display: inline-block; width: 26px; height: 0; flex: none; }
@@ -213,6 +216,12 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 .relation-node:hover .node-core, .relation-node:focus-visible .node-core { filter: drop-shadow(0 0 6px rgba(152, 240, 198, .8)); }
 .relation-node.is-selected .node-core { stroke-width: 3; filter: drop-shadow(0 0 8px rgba(230, 189, 115, .95)); }
 .relation-node.is-dim { opacity: .18; }
+/* 不存在于当前细胞的细胞器：虚线描边 + 淡化 */
+.relation-node.is-absent .node-core { stroke-dasharray: 5 4; }
+.relation-node.is-absent .node-core,
+.relation-node.is-absent .node-outer,
+.relation-node.is-absent .node-short { opacity: .45; }
+.relation-node.is-absent .node-name { opacity: .55; }
 .node-pulse { fill: none; stroke: rgba(230, 189, 115, .8); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: node-pulse 1.6s ease-out infinite; }
 @keyframes node-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.5); opacity: 0; } }
 .node-name { font: 600 13px "Noto Sans SC", sans-serif; fill: #eafaf1; paint-order: stroke; stroke: rgba(7, 19, 20, .88); stroke-width: 4px; stroke-linejoin: round; text-anchor: middle; pointer-events: none; }
@@ -234,6 +243,13 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 
 .legend-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .legend-list li { display: flex; align-items: center; gap: 10px; color: #bccfc5; font-size: 12.5px; }
+.legend-absent { flex: none; width: 14px; height: 14px; border: 1.5px dashed #98f0c6; border-radius: 50%; opacity: .6; }
+
+.panel-scope { display: flex; gap: 9px; align-items: flex-start; margin-top: 16px; padding: 11px 13px; border: 1px solid rgba(127, 184, 240, .35); border-radius: 8px; background: rgba(127, 184, 240, .06); color: #a9c6e8; font-size: 12px; line-height: 1.7; }
+.panel-scope svg { flex: none; margin-top: 2px; }
+.panel-scope strong { color: #cfe0f5; font-weight: 600; }
+.absent-note { display: flex; gap: 8px; align-items: flex-start; margin: 14px 0 0; padding: 11px 13px; border: 1px solid rgba(242, 192, 99, .4); border-radius: 8px; background: rgba(242, 192, 99, .07); color: #eec27a; font-size: 12px; line-height: 1.7; }
+.absent-note svg { flex: none; margin-top: 2px; }
 
 .chain-list { display: grid; gap: 8px; }
 .chain-item { display: grid; gap: 4px; padding: 12px 14px; text-align: left; border: 1px solid rgba(184, 232, 203, .2); border-radius: 8px; background: transparent; color: #e9f5ed; transition: border-color .15s, background .15s; }

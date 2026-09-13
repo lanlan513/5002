@@ -1,10 +1,16 @@
-import { ArrowLeft, ArrowRight, Dna, ListOrdered, Microscope, MousePointerClick, Package, Workflow, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Dna, Globe, Info, ListOrdered, Microscope, MousePointerClick, Package, Workflow, Zap } from "lucide-react";
 import type { RelationEdgeKind, RelationGraph, RelationNodeKind, RelationSelection } from "../types";
 
 interface RelationPanelProps {
   graph: RelationGraph;
   selection: RelationSelection | null;
   activeChainId: string | null;
+  /** 当前细胞名称（用于视角提示）；为 null 表示细胞未载入 */
+  currentCellName: string | null;
+  /** 当前细胞含有的细胞器 id 集合；为 null 表示不做“是否存在”判断 */
+  presentOrganelleIds: Set<string> | null;
+  /** 某个细胞器首次出现的细胞名称 */
+  cellNameOf: (organelleId: string) => string | null;
   onSelectNode: (id: string) => void;
   onSelectEdge: (id: string) => void;
   onSelectChain: (id: string | null) => void;
@@ -35,6 +41,9 @@ export default function RelationPanel({
   graph,
   selection,
   activeChainId,
+  currentCellName,
+  presentOrganelleIds,
+  cellNameOf,
   onSelectNode,
   onSelectEdge,
   onSelectChain,
@@ -44,10 +53,16 @@ export default function RelationPanel({
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const activeChain = graph.chains.find((chain) => chain.id === activeChainId) ?? null;
 
+  /** 该节点是否为不存在于当前细胞的细胞器 */
+  const isAbsent = (organelleId: string | undefined) =>
+    organelleId !== undefined && presentOrganelleIds !== null && !presentOrganelleIds.has(organelleId);
+
   /* ---------- 选中节点：解释 + 相关关系（可继续探索） ---------- */
   if (selection?.type === "node") {
     const node = nodeById.get(selection.id);
     if (!node) return null;
+    const absent = node.kind === "organelle" && isAbsent(node.organelleId);
+    const targetCellName = node.organelleId ? cellNameOf(node.organelleId) : null;
     const relations = graph.edges
       .filter((edge) => edge.from === node.id || edge.to === node.id)
       .map((edge) => ({
@@ -68,9 +83,16 @@ export default function RelationPanel({
           <p>{node.description}</p>
         </div>
 
+        {absent && currentCellName && (
+          <p className="absent-note">
+            <Info size={14} /> {node.name}不存在于{currentCellName}中，此处展示它在通用图谱中的位置。
+          </p>
+        )}
+
         {node.organelleId && (
           <button className="panel-action" onClick={() => onViewOrganelle(node.organelleId!)}>
-            <Microscope size={14} /> 在细胞结构图中查看
+            <Microscope size={14} />
+            {absent && targetCellName ? `切换到${targetCellName}查看` : "在细胞结构图中查看"}
           </button>
         )}
 
@@ -195,12 +217,23 @@ export default function RelationPanel({
         细胞器不是孤立工作的：信息、物质和能量在它们之间不断流动，共同维持细胞的生命活动。
       </p>
 
+      <div className="panel-scope">
+        <Globe size={14} />
+        <span>
+          本图谱为<strong>跨细胞类型的通用关系图谱</strong>，内容不随细胞切换而改变。
+          {currentCellName && (
+            <>当前视角为<strong>{currentCellName}</strong>：图中以虚线描边标出不存在于该细胞的细胞器。</>
+          )}
+        </span>
+      </div>
+
       <div className="panel-section">
         <h3>图例</h3>
         <ul className="legend-list">
           <li><span className="legend-line kind-information" /> 信息流动 · 如转录、翻译</li>
           <li><span className="legend-line kind-material" /> 物质流动 · 如囊泡运输</li>
           <li><span className="legend-line kind-energy" /> 能量流动 · 如氧化磷酸化</li>
+          {presentOrganelleIds && <li><span className="legend-absent" /> 虚线描边 · 不存在于当前细胞</li>}
         </ul>
       </div>
 
