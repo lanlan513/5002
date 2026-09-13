@@ -59,6 +59,71 @@ app.get("/api/knowledge/:slug", (request, response) => {
   response.json(entry);
 });
 
+app.get("/api/genetics/overview", (_request, response) => {
+  const chromosomeRows = db.prepare("SELECT * FROM chromosomes ORDER BY position").all();
+  const geneCount = db.prepare("SELECT COUNT(*) AS count FROM genes").get() as { count: number };
+  const conceptCount = db.prepare("SELECT COUNT(*) AS count FROM genetic_concepts").get() as { count: number };
+  const basePairs = db.prepare("SELECT SUM(base_pairs) AS total FROM chromosomes").get() as { total: number };
+
+  response.json({
+    stats: {
+      chromosomes: chromosomeRows.length,
+      genes: geneCount.count,
+      concepts: conceptCount.count,
+      basePairs: basePairs.total
+    },
+    chromosomes: chromosomeRows
+  });
+});
+
+app.get("/api/genetics/chromosomes/:slug", (request, response) => {
+  const chromosome = db.prepare("SELECT * FROM chromosomes WHERE slug = ?").get(request.params.slug);
+  if (!chromosome) return response.status(404).json({ message: "Chromosome not found" });
+
+  const chromosomeGenes = db
+    .prepare("SELECT * FROM genes WHERE chromosome_slug = ? ORDER BY symbol")
+    .all(request.params.slug);
+  return response.json({ ...chromosome, genes: chromosomeGenes });
+});
+
+app.get("/api/genetics/genes/:slug", (request, response) => {
+  const gene = db
+    .prepare(`
+      SELECT genes.*, chromosomes.name AS chromosome_name, chromosomes.short_label AS chromosome_label
+      FROM genes JOIN chromosomes ON chromosomes.slug = genes.chromosome_slug
+      WHERE genes.slug = ?
+    `)
+    .get(request.params.slug);
+  if (!gene) return response.status(404).json({ message: "Gene not found" });
+  response.json(gene);
+});
+
+app.get("/api/genetics/search", (request, response) => {
+  const query = typeof request.query.q === "string" ? request.query.q.trim() : "";
+  if (!query) return response.json({ genes: [], concepts: [] });
+
+  const like = `%${query}%`;
+  const matchedGenes = db
+    .prepare(`
+      SELECT genes.*, chromosomes.name AS chromosome_name, chromosomes.short_label AS chromosome_label
+      FROM genes JOIN chromosomes ON chromosomes.slug = genes.chromosome_slug
+      WHERE genes.symbol LIKE ? OR genes.name LIKE ? OR genes.summary LIKE ? OR genes.trait LIKE ?
+      ORDER BY genes.symbol
+      LIMIT 8
+    `)
+    .all(like, like, like, like);
+  const matchedConcepts = db
+    .prepare(`
+      SELECT * FROM genetic_concepts
+      WHERE term LIKE ? OR definition LIKE ? OR category LIKE ?
+      ORDER BY term
+      LIMIT 8
+    `)
+    .all(like, like, like);
+
+  return response.json({ genes: matchedGenes, concepts: matchedConcepts });
+});
+
 app.post("/api/interactions", (request, response) => {
   const { sessionId, eventType, entityType, entitySlug } = request.body ?? {};
   if (![sessionId, eventType, entityType, entitySlug].every((value) => typeof value === "string")) {

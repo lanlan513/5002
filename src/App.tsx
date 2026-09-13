@@ -13,8 +13,13 @@ import {
   X
 } from "lucide-react";
 import { api, type Knowledge, type Topic } from "./api";
+import GeneticsPage from "./Genetics";
 
-type Page = { kind: "home" } | { kind: "topic"; slug: string } | { kind: "entry"; slug: string };
+type Page =
+  | { kind: "home" }
+  | { kind: "topic"; slug: string }
+  | { kind: "entry"; slug: string }
+  | { kind: "genetics"; sub?: string; slug?: string };
 
 const iconMap = {
   "circle-dot": CircleDot,
@@ -34,9 +39,10 @@ const scaleLabels: Record<string, string> = {
 };
 
 const routeFromHash = (): Page => {
-  const [kind, slug] = window.location.hash.slice(1).split("/");
-  if (kind === "topic" && slug) return { kind: "topic", slug };
-  if (kind === "entry" && slug) return { kind: "entry", slug };
+  const [kind, first, second] = window.location.hash.slice(1).split("/");
+  if (kind === "topic" && first) return { kind: "topic", slug: first };
+  if (kind === "entry" && first) return { kind: "entry", slug: first };
+  if (kind === "genetics") return { kind: "genetics", sub: first, slug: second };
   return { kind: "home" };
 };
 
@@ -82,6 +88,9 @@ function App() {
       )}
       {page.kind === "topic" && <TopicPage slug={page.slug} onNavigate={navigate} />}
       {page.kind === "entry" && <EntryPage slug={page.slug} onNavigate={navigate} />}
+      {page.kind === "genetics" && (
+        <GeneticsPage sub={page.sub} slug={page.slug} onNavigate={navigate} />
+      )}
       {searchOpen && (
         <SearchDialog
           topics={topics}
@@ -123,6 +132,7 @@ function Header({
             {topic.short_name}
           </button>
         ))}
+        <button onClick={() => onNavigate("genetics")}>遗传实验室</button>
       </nav>
       <div className="header-actions">
         <button className="icon-button" aria-label="搜索" onClick={onSearch}>
@@ -310,6 +320,11 @@ function TopicPage({ slug, onNavigate }: { slug: string; onNavigate: (to: string
         <p className="eyebrow">LIFE DOMAIN / 0{topic.position}</p>
         <h1>{topic.name}</h1>
         <p>{topic.description}</p>
+        {topic.slug === "genetics" && (
+          <button className="text-command topic-hero-cta" onClick={() => onNavigate("genetics")}>
+            进入 DNA 双螺旋实验室 <ArrowUpRight size={17} />
+          </button>
+        )}
       </div>
       <div className="topic-content">
         <div className="topic-aside">

@@ -81,6 +81,106 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 .search-overlay { position: fixed; z-index: 20; inset: 0; padding-top: 15vh; background: rgba(3, 12, 9, .79); backdrop-filter: blur(9px); }.search-panel { width: min(610px, calc(100% - 32px)); margin: auto; border: 1px solid rgba(184, 232, 203, .34); background: #10251f; }.search-panel > div:first-child { height: 63px; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 20px; border-bottom: 1px solid rgba(184, 232, 203, .18); color: #a8c6b4; }.search-panel input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #effcf4; font-size: 15px; }.search-panel input::placeholder { color: #78958a; }.search-results { min-height: 155px; padding: 11px; }.search-results > p { color: #79998a; font-size: 13px; padding: 15px 10px; }.search-results button { width: 100%; display: grid; grid-template-columns: 90px 1fr 20px; padding: 13px 10px; align-items: center; text-align: left; background: transparent; color: #e9f5ed; }.search-results button:hover { background: rgba(192, 247, 213, .08); }.search-results button span { color: #88b79b; font-size: 11px; }
 .loading { min-height: 100vh; display: grid; place-content: center; gap: 12px; color: #95ad9f; font: 12px "DM Mono", monospace; text-align: center; }.loading-ring { width: 27px; height: 27px; margin: auto; border: 1px solid #87d5ab; border-right-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
 
+.genetics-page { background: #071314; }
+.genetics-hero { display: grid; grid-template-columns: minmax(340px, 42%) 1fr; gap: 4vw; min-height: 100svh; padding: 118px 4.6vw 64px; background: radial-gradient(circle at 74% 42%, #14352a 0, #0a201b 38%, #071314 72%); }
+.genetics-copy { align-self: center; max-width: 520px; }
+.genetics-copy .back-button { margin-bottom: 54px; }
+.genetics-copy .eyebrow { color: #c9a35f; }
+.genetics-copy h1 { font: 400 clamp(44px, 4.8vw, 68px)/1.1 "Source Serif 4", serif; margin: 0 0 24px; }
+.genetics-copy .hero-lede { max-width: 440px; }
+.genetics-stats { display: flex; gap: 34px; margin-top: 46px; }
+.genetics-stats div { border-top: 1px solid rgba(230, 189, 115, .4); padding-top: 12px; min-width: 96px; }
+.genetics-stats span { display: block; font: 10px "DM Mono", monospace; color: #8ea59b; letter-spacing: .6px; }
+.genetics-stats strong { display: block; margin-top: 8px; font: 500 26px "Source Serif 4", serif; color: #f0e8d8; }
+.helix-stage { position: relative; display: flex; flex-direction: column; min-height: 560px; border: 1px solid rgba(230, 189, 115, .22); background: radial-gradient(circle at 50% 40%, rgba(230, 189, 115, .07), transparent 55%), rgba(7, 19, 20, .5); overflow: hidden; }
+.helix-toolbar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid rgba(230, 189, 115, .16); }
+.helix-sequence-label { display: inline-flex; align-items: center; gap: 8px; color: #e6bd73; font: 11px "DM Mono", monospace; letter-spacing: .8px; }
+.helix-controls { display: flex; gap: 8px; }
+.helix-control { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border: 1px solid rgba(230, 189, 115, .38); border-radius: 999px; background: transparent; color: #ecd9ae; font-size: 11.5px; transition: background .2s; }
+.helix-control:hover { background: rgba(230, 189, 115, .14); }
+.helix-canvas { flex: 1; width: 100%; min-height: 380px; cursor: grab; touch-action: none; }
+.helix-canvas:active { cursor: grabbing; }
+.pair-panel { position: relative; z-index: 2; min-height: 118px; padding: 15px 18px 16px; border-top: 1px solid rgba(230, 189, 115, .16); background: rgba(7, 19, 20, .68); backdrop-filter: blur(6px); }
+.pair-heading { display: flex; align-items: center; justify-content: space-between; color: #c9a35f; font: 10px "DM Mono", monospace; letter-spacing: 1px; margin-bottom: 10px; }
+.pair-bases { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+.pair-base { font: 500 30px "DM Mono", monospace; }
+.pair-bases i { display: block; width: 46px; height: 1px; background: linear-gradient(90deg, rgba(240, 250, 244, .55), rgba(240, 250, 244, .15)); }
+.pair-panel p { margin: 0; color: #a9bfb3; font-size: 12.5px; line-height: 1.75; max-width: 480px; }
+.pair-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 9px; font: 12px "DM Mono", monospace; }
+
+.genetics-explorer { background: #e5eee9; color: #112520; padding: 92px 4.6vw 96px; }
+.genetics-explorer .section-intro h2 { color: #112520; }
+.genetics-breadcrumb { display: flex; align-items: center; gap: 10px; margin: 44px 0 36px; color: #8ba197; }
+.genetics-breadcrumb button { background: transparent; padding: 3px 0; color: #5c7268; font-size: 13px; border-bottom: 1px dashed transparent; transition: color .2s; }
+.genetics-breadcrumb button:hover:not(:disabled) { color: #112520; }
+.genetics-breadcrumb button:disabled { cursor: default; opacity: .55; }
+.genetics-breadcrumb button.is-current { color: #112520; font-weight: 600; border-bottom-color: #8a6a2f; }
+.hierarchy-ladder { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 64px; }
+.ladder-step { border-top: 1px solid #9cb2a8; padding: 15px 6px 0 0; }
+.ladder-index { font: 10px "DM Mono", monospace; color: #638075; }
+.ladder-scale { display: block; margin: 14px 0 6px; font: 10px "DM Mono", monospace; letter-spacing: 1.5px; color: #a07c2c; }
+.ladder-step strong { font: 400 22px "Source Serif 4", serif; }
+.ladder-step p { margin: 9px 0 0; color: #5f746c; font-size: 12.5px; line-height: 1.7; }
+.chromosome-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 14px; }
+.chromosome-card { display: flex; flex-direction: column; gap: 9px; min-height: 196px; padding: 20px; text-align: left; color: inherit; background: transparent; border: 1px solid #c0d1c8; border-radius: 4px; transition: background .2s, transform .2s; }
+.chromosome-card:hover { background: #f3f8f4; transform: translateY(-3px); }
+.chromosome-label { font: 10px "DM Mono", monospace; letter-spacing: 1.5px; color: #a07c2c; }
+.chromosome-card strong { font: 400 23px "Source Serif 4", serif; }
+.chromosome-card p { margin: 0; color: #5f746c; font-size: 12.5px; line-height: 1.7; }
+.chromosome-card div { display: flex; align-items: center; gap: 14px; margin-top: auto; color: #527064; }
+.chromosome-card small { font: 10px "DM Mono", monospace; color: #6d8379; }
+.chromosome-card svg { margin-left: auto; }
+.chromosome-detail header { max-width: 620px; margin-bottom: 34px; }
+.chromosome-detail h3 { font: 400 36px "Source Serif 4", serif; margin: 12px 0 10px; }
+.chromosome-detail header p { color: #5f746c; font-size: 14px; line-height: 1.8; }
+.chromosome-meta { display: flex; gap: 20px; font: 11px "DM Mono", monospace; color: #6d8379; }
+.gene-list { border-top: 1px solid #a9bdb3; }
+.gene-row { width: 100%; display: grid; grid-template-columns: 92px 1fr 120px 20px; align-items: center; gap: 14px; padding: 15px 10px; background: transparent; border-bottom: 1px solid #c4d2ca; color: inherit; text-align: left; transition: background .2s, padding .2s; }
+.gene-row:hover { background: rgba(255, 255, 255, .55); padding-left: 16px; }
+.gene-symbol { font: 600 13px "DM Mono", monospace; letter-spacing: .6px; color: #8a6a2f; }
+.gene-name { font-size: 14px; color: #17342a; }
+.gene-location { font: 11px "DM Mono", monospace; color: #6d8379; }
+.gene-detail { max-width: 880px; }
+.gene-detail > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.gene-symbol-large { font: 600 13px "DM Mono", monospace; letter-spacing: 2.5px; color: #a07c2c; }
+.gene-detail h3 { font: 400 40px "Source Serif 4", serif; margin: 8px 0 0; }
+.gene-detail .text-command { color: #7d6224; margin-top: 14px; }
+.gene-meta { display: flex; gap: 18px; margin: 16px 0 22px; font: 11px "DM Mono", monospace; color: #6d8379; }
+.gene-summary { max-width: 640px; color: #33483f; font-size: 16px; line-height: 1.85; }
+.gene-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin: 28px 0 34px; }
+.gene-facts dt { font: 10px "DM Mono", monospace; letter-spacing: 1px; color: #638075; margin-bottom: 9px; }
+.gene-facts dd { margin: 0; color: #33483f; font-size: 13.5px; line-height: 1.85; }
+.sequence-block { border: 1px solid #c0d1c8; border-radius: 4px; background: rgba(255, 255, 255, .4); padding: 18px 20px; }
+.sequence-title { display: block; margin-bottom: 13px; font: 10px "DM Mono", monospace; letter-spacing: .8px; color: #638075; }
+.sequence-strip { margin: 0; font: 15px/2.1 "DM Mono", monospace; letter-spacing: 2px; }
+.sequence-strip button { background: transparent; padding: 2px 3px; font: inherit; letter-spacing: inherit; border-radius: 3px; }
+.sequence-strip button:hover { background: rgba(230, 189, 115, .3); }
+.sequence-strip button.is-selected { background: rgba(230, 189, 115, .45); outline: 1px solid #a07c2c; }
+
+.genetics-search { background: #10251f; padding: 92px 4.6vw 100px; }
+.genetics-search .signal-heading { margin-bottom: 0; }
+.genetics-search h2 { color: #eff8f2; font: 400 clamp(30px, 3.4vw, 44px)/1.2 "Source Serif 4", serif; margin: 0; }
+.gene-search-box { display: flex; align-items: center; gap: 12px; max-width: 660px; height: 57px; margin-top: 36px; padding: 0 16px; border: 1px solid rgba(184, 232, 203, .34); color: #a8c6b4; }
+.gene-search-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #effcf4; font-size: 15px; }
+.gene-search-box input::placeholder { color: #78958a; }
+.gene-search-results { max-width: 660px; margin-top: 20px; }
+.search-hint { color: #79998a; font-size: 13px; padding: 12px 4px; margin: 0; }
+.result-group { margin-bottom: 20px; }
+.result-group-label { display: block; padding: 6px 4px 9px; font: 10px "DM Mono", monospace; letter-spacing: 1.5px; color: #88b79b; }
+.result-row { width: 100%; display: grid; grid-template-columns: 82px 1fr 20px; align-items: center; gap: 12px; padding: 13px 10px; background: transparent; border-bottom: 1px solid rgba(219, 241, 229, .12); color: #e9f5ed; text-align: left; transition: background .2s; }
+.result-row:hover { background: rgba(192, 247, 213, .07); }
+.result-row .gene-symbol { color: #e6bd73; }
+.result-main { display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
+.result-main small { color: #78958a; font-size: 11px; }
+.concept-category { justify-self: start; padding: 3px 9px; border: 1px solid rgba(230, 189, 115, .42); border-radius: 999px; color: #e6bd73; font: 10px "DM Mono", monospace; }
+.concept-card { margin-top: 14px; padding: 20px; border: 1px solid rgba(184, 232, 203, .3); background: rgba(7, 19, 20, .45); }
+.concept-card-head { display: flex; align-items: center; gap: 13px; margin-bottom: 13px; }
+.concept-card-head strong { color: #eff8f2; font-size: 17px; font-weight: 600; }
+.concept-card-head .icon-button { margin-left: auto; }
+.concept-card p { margin: 0 0 15px; color: #b9cdc2; font-size: 13.5px; line-height: 1.9; }
+.concept-card .text-command { padding: 0; }
+.topic-hero-cta { margin-top: 28px; }
+
 @media (max-width: 740px) {
   .site-header { padding: 0 20px; height: 62px; }.primary-nav { display: none; position: absolute; top: 62px; left: 0; right: 0; margin: 0; padding: 10px 20px 17px; background: #0c1d18; border-bottom: 1px solid rgba(220, 250, 232, .15); }.primary-nav.is-open { display: grid; }.primary-nav button { padding: 11px 0; text-align: left; }.mobile-only { display: grid; }
   .life-field { min-height: 780px; }.hero-copy { padding: 145px 20px 40px; }.hero-copy h1 { font-size: 46px; }.field-readout { left: 20px; right: auto; bottom: 69px; width: calc(100% - 40px); }.field-index { bottom: 24px; right: 20px; }.field-readout p { max-width: 290px; }
@@ -88,4 +188,19 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
   footer { padding: 30px 20px; min-height: 170px; align-items: flex-start; flex-direction: column; }
   .detail-page { padding-top: 62px; }.topic-hero { min-height: 360px; padding: 38px 20px; }.topic-hero::after { width: 230px; height: 230px; right: -50px; top: 80px; }.topic-hero-icon { margin-top: 62px; }.topic-hero h1 { font-size: 48px; }.topic-content { padding: 45px 20px 70px; grid-template-columns: 1fr; gap: 27px; }.topic-aside { display: flex; align-items: center; justify-content: space-between; }.topic-aside strong { font-size: 30px; }.article-grid { grid-template-columns: 1fr; }.article-card { min-height: 225px; }
   .reading-page { padding: 94px 20px 70px; }.reading-page .back-button { margin-bottom: 45px; }.reading-page h1 { font-size: 44px; }.reading-page header p { font-size: 15px; }.reading-visual { height: 250px; margin: 42px 0; }.article-body { grid-template-columns: 1fr; gap: 24px; }.article-body > p { font-size: 18px; }.article-body aside { max-width: 200px; }
+  .genetics-hero { grid-template-columns: 1fr; gap: 34px; padding: 104px 20px 50px; min-height: auto; }
+  .genetics-copy .back-button { margin-bottom: 34px; }
+  .genetics-copy h1 { font-size: 44px; }
+  .genetics-stats { gap: 20px; flex-wrap: wrap; }
+  .helix-stage { min-height: 480px; }
+  .helix-canvas { min-height: 300px; }
+  .genetics-explorer, .genetics-search { padding-left: 20px; padding-right: 20px; }
+  .hierarchy-ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chromosome-grid { grid-template-columns: 1fr; }
+  .gene-row { grid-template-columns: 74px 1fr 18px; }
+  .gene-row .gene-location { display: none; }
+  .gene-detail > header { flex-direction: column; }
+  .gene-detail h3 { font-size: 32px; }
+  .gene-facts { grid-template-columns: 1fr; }
+  .result-row { grid-template-columns: 66px 1fr 18px; }
 }
