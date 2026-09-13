@@ -71,6 +71,9 @@ function MendelSimulator({ onNavigate }: { onNavigate: (to: string) => void }) {
   };
 
   const toggleTrait = (id: string) => {
+    // 取消唯一已选性状会使性状数降为零，配置实际保持不变：
+    // 此时不离开预设状态，保证卡片高亮与讲解卡始终对应当前配置
+    if (config.traitIds.length === 1 && config.traitIds.includes(id)) return;
     setActivePreset("custom");
     setConfig((current) => {
       const has = current.traitIds.includes(id);
