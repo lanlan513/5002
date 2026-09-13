@@ -36,7 +36,8 @@ const scaleLabels: Record<string, string> = {
 };
 
 const routeFromHash = (): Page => {
-  const [kind, slug] = window.location.hash.slice(1).split("/");
+  // 同时兼容 #explorer 与 #/explorer 两种写法
+  const [kind, slug] = window.location.hash.replace(/^#\/?/, "").split("/");
   if (kind === "explorer") return { kind: "explorer" };
   if (kind === "topic" && slug) return { kind: "topic", slug };
   if (kind === "entry" && slug) return { kind: "entry", slug };

@@ -110,37 +110,32 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
 
   return (
     <section className="explorer-page">
-      <div className="explorer-head">
+      <div className="explorer-topbar">
         <button className="back-button" onClick={() => onNavigate("")}>
-          <ArrowLeft size={16} /> 返回探索
+          <ArrowLeft size={15} /> 返回探索
         </button>
-        <p className="eyebrow">CELL EXPLORER</p>
         <h1>细胞探索器</h1>
-        <p className="explorer-lede">
-          缩放、拖拽、点击 —— 在可交互的结构图中观察动物细胞、植物细胞与原核细胞，直观比较它们在结构上的异同。
-        </p>
-      </div>
-
-      <div className="cell-tabs" role="tablist" aria-label="选择细胞类型">
-        {cells.map((item) => {
-          const Icon = cellIcon(item.icon);
-          const active = cell?.id === item.id;
-          return (
-            <button
-              key={item.id}
-              role="tab"
-              aria-selected={active}
-              className={`cell-tab ${active ? "is-active" : ""}`}
-              onClick={() => void loadCell(item.id)}
-            >
-              <span className="tab-icon"><Icon size={18} strokeWidth={1.8} /></span>
-              <span className="tab-text">
-                <strong>{item.name}</strong>
-                <small>{item.englishName}</small>
-              </span>
-            </button>
-          );
-        })}
+        <div className="cell-tabs" role="tablist" aria-label="选择细胞类型">
+          {cells.map((item) => {
+            const Icon = cellIcon(item.icon);
+            const active = cell?.id === item.id;
+            return (
+              <button
+                key={item.id}
+                role="tab"
+                aria-selected={active}
+                className={`cell-tab ${active ? "is-active" : ""}`}
+                onClick={() => void loadCell(item.id)}
+              >
+                <span className="tab-icon"><Icon size={17} strokeWidth={1.8} /></span>
+                <span className="tab-text">
+                  <strong>{item.name}</strong>
+                  <small>{item.englishName}</small>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {error && <p className="explorer-error">加载失败：{error}。请确认后端 API 已启动。</p>}

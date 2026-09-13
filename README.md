@@ -26,7 +26,7 @@ GET /api/organelles/:id  细胞器详情（名称 / 功能 / 位置 / 相关知�
   种子数据在 `server/cellSeed.ts`（含全部 SVG 图形坐标与知识文案），首次启动自动建表灌入。
 - **前端** `src/explorer/`：React 组件 —— `CellExplorer`（容器/状态）、`CellCanvas`（SVG 渲染 +
   缩放平移）、`InfoPanel`（详情侧栏）、`CompareModal`（对比表）、`Shape`（图形描述 → SVG 元素）。
-- 页面入口：首页 Hero 按钮、顶部导航“细胞探索器”、细胞主题页 CTA，路由为 `#/explorer`。
+- 页面入口：首页 Hero 按钮、顶部导航“细胞探索器”、细胞主题页 CTA，路由为 `#/explorer`（`#explorer` 与 `#/explorer` 两种写法均可解析）。
 
 ## 运行
 
