@@ -117,7 +117,7 @@ export default function ProcessControls({ process, player }: ProcessControlsProp
             onClick={player.nextStep}
             title="下一阶段"
             aria-label="下一阶段"
-            disabled={step >= process.steps.length - 1 && player.scene.progress >= 1}
+            disabled={step >= process.steps.length - 1}
           >
             <SkipForward size={15} />
           </button>

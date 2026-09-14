@@ -73,6 +73,19 @@ export function useProcessPlayer(process: ProcessDetail | null): PlayerApi {
     playingRef.current = false;
   }, [process?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** 由时间反查当前阶段索引（暂停后拖动 / seek 后必须同步，否则上下步会跳到错误阶段） */
+  const computeStep = useCallback((t: number) => {
+    const b = boundariesRef.current;
+    const count = stepCountRef.current;
+    const end = totalRef.current;
+    if (count === 0) return 0;
+    if (t >= end - 1e-6) return count - 1; // 停在结尾时属于最后一步
+    // 越过边界一个极小余量（逐阶段暂停停在 b[i] + ε）也算进入第 i 步
+    let s = 0;
+    for (let i = 1; i < count; i++) if (t >= b[i] - 1e-6) s = i;
+    return s;
+  }, []);
+
   useEffect(() => {
     const tick = (now: number) => {
       rafRef.current = requestAnimationFrame(tick);
@@ -90,7 +103,6 @@ export function useProcessPlayer(process: ProcessDetail | null): PlayerApi {
       const end = totalRef.current || 1e-6;
       let pausedAtBoundary = false;
       let wrapped = false;
-
       if (next >= end) {
         if (loopRef.current) {
           next = next % end;
@@ -118,10 +130,7 @@ export function useProcessPlayer(process: ProcessDetail | null): PlayerApi {
       }
 
       // 步骤索引（供上一步 / 下一步按钮使用）
-      let s = 0;
-      for (let i = 0; i < count; i++) if (next >= b[i]) s = i;
-      if (next >= end) s = count - 1;
-      stepRef.current = s;
+      stepRef.current = computeStep(next);
 
       timeRef.current = next;
       setTime(next);
@@ -135,16 +144,18 @@ export function useProcessPlayer(process: ProcessDetail | null): PlayerApi {
     (t: number) => {
       const clamped = Math.min(Math.max(t, 0), totalRef.current || 0);
       timeRef.current = clamped;
+      stepRef.current = computeStep(clamped); // 同步阶段索引：暂停后拖动 / 跳转也保持上下步正确
       lastRef.current = null;
       setTime(clamped);
     },
-    []
+    [computeStep]
   );
 
   const play = useCallback(() => {
     // 已播放到结尾时按播放键自动从头开始
     if (timeRef.current >= totalRef.current - 0.001) {
       timeRef.current = 0;
+      stepRef.current = 0;
       setTime(0);
     }
     lastRef.current = null;
@@ -156,6 +167,32 @@ export function useProcessPlayer(process: ProcessDetail | null): PlayerApi {
     playingRef.current = false;
     setPlaying(false);
   }, []);
+
+  const gotoStep = useCallback(
+    (index: number) => {
+      const max = Math.max((stepCountRef.current || 1) - 1, 0);
+      const target = Math.min(Math.max(index, 0), max);
+      seek(boundariesRef.current[target]);
+    },
+    [seek]
+  );
+
+  const nextStep = useCallback(() => {
+    const last = Math.max((stepCountRef.current || 1) - 1, 0);
+    // 已在最后一步（尤其已到结尾）时不再回跳到该步开头，停在原地
+    if (stepRef.current >= last) return;
+    gotoStep(stepRef.current + 1);
+  }, [gotoStep]);
+
+  const prevStep = useCallback(() => {
+    const cur = stepRef.current;
+    // 已在第一步开头时无处可退
+    if (cur === 0 && timeRef.current <= boundariesRef.current[0] + 0.06) return;
+    // 已在本阶段开头附近（含“逐阶段暂停”停在 b[i]+ε 的位置）则回到上一步，
+    // 否则先回到当前阶段开头，再按一次才继续后退
+    const atStart = Math.abs(timeRef.current - boundariesRef.current[cur]) < 0.06;
+    gotoStep(atStart ? cur - 1 : cur);
+  }, [gotoStep]);
 
   const api: PlayerApi = {
     scene: process ? sampleScene(process, boundaries, tracks, time) : {
@@ -178,17 +215,9 @@ export function useProcessPlayer(process: ProcessDetail | null): PlayerApi {
     restart: () => seek(0),
     seek,
     seekProgress: (p) => seek(Math.min(Math.max(p, 0), 1) * (totalRef.current || 1)),
-    gotoStep: (index) => seek(boundaries[Math.min(Math.max(index, 0), (process?.steps.length ?? 1) - 1)]),
-    nextStep: () => {
-      const nextIndex = Math.min(stepRef.current + 1, (process?.steps.length ?? 1) - 1);
-      seek(boundaries[nextIndex]);
-    },
-    prevStep: () => {
-      // 已在步骤开头则回到上一步，否则回到当前步骤开头
-      const cur = stepRef.current;
-      const atStart = Math.abs(timeRef.current - boundaries[cur]) < 0.05;
-      seek(boundaries[atStart ? Math.max(cur - 1, 0) : cur]);
-    },
+    gotoStep,
+    nextStep,
+    prevStep,
     setSpeed,
     setLoop,
     setPauseOnStep

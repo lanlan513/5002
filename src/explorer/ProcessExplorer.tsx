@@ -39,16 +39,38 @@ export default function ProcessExplorer({
   const seqRef = useRef(0);
   const trackRef = useRef(onTrack);
   trackRef.current = onTrack;
+  /* 用户是否手动选过过程（手动选择优先于“当前细胞默认过程”逻辑） */
+  const manualPickRef = useRef(false);
+  const prevCellIdRef = useRef<string | null>(null);
 
-  /* 默认选中第一个适用于当前细胞的过程 */
+  /*
+   * 默认选中逻辑（只在两种情况下生效，不会覆盖用户的手动选择）：
+   * 1. 首次拿到过程列表；2. 切换了细胞类型（重新挑一个适用于新细胞的过程）。
+   * 用户在同细胞内点击任何过程卡片（包括“当前细胞不适用”的）都保留该选择。
+   */
   useEffect(() => {
     if (summaries.length === 0 || !cell) return;
-    const exists = summaries.some((p) => p.id === activeId && p.cellIds.includes(cell.id));
-    if (!exists) {
-      const first = summaries.find((p) => p.cellIds.includes(cell.id)) ?? summaries[0];
-      setActiveId(first.id);
-    }
+    const cellChanged = prevCellIdRef.current !== null && prevCellIdRef.current !== cell.id;
+    prevCellIdRef.current = cell.id;
+
+    if (cellChanged) manualPickRef.current = false; // 切换细胞后恢复“按细胞默认”
+
+    if (manualPickRef.current) return;
+
+    const currentApplicable = activeId
+      ? summaries.some((p) => p.id === activeId && p.cellIds.includes(cell.id))
+      : false;
+    if (currentApplicable) return;
+
+    const first = summaries.find((p) => p.cellIds.includes(cell.id)) ?? summaries[0];
+    setActiveId(first.id);
   }, [summaries, cell, activeId]);
+
+  /** 用户手动选择过程卡片：优先级最高，不再被默认逻辑重置 */
+  const selectProcess = useCallback((id: string) => {
+    manualPickRef.current = true;
+    setActiveId(id);
+  }, []);
 
   const loadDetail = useCallback(async (id: string) => {
     const seq = ++seqRef.current;
@@ -193,7 +215,7 @@ export default function ProcessExplorer({
               process={p}
               active={p.id === (detail?.id ?? activeId)}
               unavailable={!available.has(p.id)}
-              onSelect={() => setActiveId(p.id)}
+              onSelect={() => selectProcess(p.id)}
             />
           ))}
         </div>
