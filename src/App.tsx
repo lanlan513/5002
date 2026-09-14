@@ -13,9 +13,15 @@ import {
   X
 } from "lucide-react";
 import { api, type Knowledge, type Topic } from "./api";
+import { BodyExplorer, type BodyRoute } from "./body/BodyExplorer";
 
-type Page = { kind: "home" } | { kind: "topic"; slug: string } | { kind: "entry"; slug: string };
+type BodyPage = { kind: "body"; level: BodyRoute["level"]; slug?: string };
 
+type Page =
+  | { kind: "home" }
+  | { kind: "topic"; slug: string }
+  | { kind: "entry"; slug: string }
+  | BodyPage;
 const iconMap = {
   "circle-dot": CircleDot,
   "git-fork": GitFork,
@@ -34,10 +40,16 @@ const scaleLabels: Record<string, string> = {
 };
 
 const routeFromHash = (): Page => {
-  const [kind, slug] = window.location.hash.slice(1).split("/");
+  const [kind, slug, detail] = window.location.hash.slice(1).split("/");
   if (kind === "topic" && slug) return { kind: "topic", slug };
   if (kind === "entry" && slug) return { kind: "entry", slug };
-  return { kind: "home" };
+  if (kind === "body") {
+    if (slug === "system" && detail) return { kind: "body", level: "system", slug: detail };
+    if (slug === "organ" && detail) return { kind: "body", level: "organ", slug: detail };
+    if (slug === "tissue" && detail) return { kind: "body", level: "tissue", slug: detail };
+    if (slug === "cell" && detail) return { kind: "body", level: "cell", slug: detail };
+    return { kind: "body", level: "body" };
+  }  return { kind: "home" };
 };
 
 function App() {
@@ -82,6 +94,12 @@ function App() {
       )}
       {page.kind === "topic" && <TopicPage slug={page.slug} onNavigate={navigate} />}
       {page.kind === "entry" && <EntryPage slug={page.slug} onNavigate={navigate} />}
+      {page.kind === "body" && (
+        <BodyExplorer
+          route={page.level === "body" ? { level: "body" } : { level: page.level, slug: page.slug ?? "" }}
+          onNavigate={navigate}
+        />
+      )}
       {searchOpen && (
         <SearchDialog
           topics={topics}
@@ -118,7 +136,8 @@ function Header({
       </button>
       <nav className={mobileMenu ? "primary-nav is-open" : "primary-nav"}>
         <button onClick={() => onNavigate("")}>探索</button>
-        {topics.slice(0, 3).map((topic) => (
+        <button onClick={() => onNavigate("body")}>人体</button>
+        {topics.slice(0, 2).map((topic) => (
           <button key={topic.slug} onClick={() => onNavigate(`topic/${topic.slug}`)}>
             {topic.short_name}
           </button>
@@ -163,9 +182,14 @@ function Home({
           <p className="hero-lede">
             BioLab 将细胞、基因、生态与人体置于同一张不断生长的生命网络中。
           </p>
-          <button className="text-command" onClick={() => document.getElementById("scales")?.scrollIntoView({ behavior: "smooth" })}>
-            选择你的观察尺度 <ArrowUpRight size={17} />
-          </button>
+          <div className="hero-actions">
+            <button className="solid-command" onClick={() => onNavigate("body")}>
+              进入人体模块 <ArrowUpRight size={16} />
+            </button>
+            <button className="text-command" onClick={() => document.getElementById("scales")?.scrollIntoView({ behavior: "smooth" })}>
+              选择观察尺度 <ArrowUpRight size={17} />
+            </button>
+          </div>
         </div>
         <div className="field-readout">
           <span>当前焦点</span>
@@ -191,7 +215,7 @@ function Home({
                 style={{ "--topic-color": topic.color } as React.CSSProperties}
                 onMouseEnter={() => explore(topic)}
                 onFocus={() => explore(topic)}
-                onClick={() => onNavigate(`topic/${topic.slug}`)}
+                onClick={() => onNavigate(topic.slug === "human-body" ? "body" : `topic/${topic.slug}`)}
               >
                 <span className="node-orbit"><Icon size={21} strokeWidth={1.6} /></span>
                 <span className="node-number">0{index + 1}</span>
@@ -316,15 +340,28 @@ function TopicPage({ slug, onNavigate }: { slug: string; onNavigate: (to: string
           <span>知识条目</span>
           <strong>{String(topic.knowledge.length).padStart(2, "0")}</strong>
         </div>
-        <div className="article-grid">
-          {topic.knowledge.map((entry) => (
-            <button className="article-card" key={entry.slug} onClick={() => onNavigate(`entry/${entry.slug}`)}>
-              <span>{scaleLabels[entry.scale]}</span>
-              <h2>{entry.title}</h2>
-              <p>{entry.summary}</p>
-              <div><small>{entry.read_time} 分钟阅读</small><ArrowUpRight size={17} /></div>
+        <div>
+          {topic.slug === "human-body" && (
+            <button className="body-launch-card" onClick={() => onNavigate("body")}>
+              <span className="body-launch-orb" />
+              <span className="body-launch-copy">
+                <small>HUMAN BIOLOGY MODULE</small>
+                <strong>打开可点击的人体示意图</strong>
+                <p>从系统、器官、组织一路深入到细胞。</p>
+              </span>
+              <ArrowUpRight size={20} />
             </button>
-          ))}
+          )}
+          <div className="article-grid">
+            {topic.knowledge.map((entry) => (
+              <button className="article-card" key={entry.slug} onClick={() => onNavigate(`entry/${entry.slug}`)}>
+                <span>{scaleLabels[entry.scale]}</span>
+                <h2>{entry.title}</h2>
+                <p>{entry.summary}</p>
+                <div><small>{entry.read_time} 分钟阅读</small><ArrowUpRight size={17} /></div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </section>

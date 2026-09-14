@@ -1,5 +1,5 @@
 import cors from "cors";
-import express from "express";
+import express, { type Response } from "express";
 import db from "./db.js";
 
 const app = express();
@@ -8,18 +8,33 @@ const port = Number(process.env.PORT ?? 8795);
 app.use(cors());
 app.use(express.json());
 
+type JsonRow = Record<string, unknown>;
+
+const parseJsonFields = (row: JsonRow | undefined, fields: string[]): JsonRow | undefined => {
+  if (!row) return row;
+  for (const field of fields) {
+    if (typeof row[field] === "string") {
+      row[field] = JSON.parse(row[field] as string);
+    }
+  }
+  return row;
+};
+
+const sendNotFound = (response: Response, message: string) =>
+  response.status(404).json({ message });
+
 app.get("/api/health", (_request, response) => {
   response.json({ status: "ok", service: "BioLab API" });
 });
 
 app.get("/api/topics", (_request, response) => {
-  const topics = db.prepare("SELECT * FROM topics ORDER BY position").all();
-  response.json(topics);
+  const topicsList = db.prepare("SELECT * FROM topics ORDER BY position").all();
+  response.json(topicsList);
 });
 
 app.get("/api/topics/:slug", (request, response) => {
   const topic = db.prepare("SELECT * FROM topics WHERE slug = ?").get(request.params.slug);
-  if (!topic) return response.status(404).json({ message: "Topic not found" });
+  if (!topic) return sendNotFound(response, "Topic not found");
 
   const entries = db
     .prepare("SELECT * FROM knowledge WHERE topic_slug = ? ORDER BY featured DESC, created_at DESC")
@@ -28,7 +43,7 @@ app.get("/api/topics/:slug", (request, response) => {
 });
 
 app.get("/api/knowledge", (request, response) => {
-  const { topic, featured } = request.query;
+  const { topic, system, featured } = request.query;
   let sql = `
     SELECT knowledge.*, topics.name AS topic_name, topics.color AS topic_color
     FROM knowledge JOIN topics ON topics.slug = knowledge.topic_slug
@@ -39,6 +54,10 @@ app.get("/api/knowledge", (request, response) => {
   if (typeof topic === "string") {
     clauses.push("knowledge.topic_slug = ?");
     params.push(topic);
+  }
+  if (typeof system === "string") {
+    clauses.push("knowledge.system_slug = ?");
+    params.push(system);
   }
   if (featured === "true") clauses.push("knowledge.featured = 1");
   if (clauses.length) sql += ` WHERE ${clauses.join(" AND ")}`;
@@ -55,8 +74,141 @@ app.get("/api/knowledge/:slug", (request, response) => {
       WHERE knowledge.slug = ?
     `)
     .get(request.params.slug);
-  if (!entry) return response.status(404).json({ message: "Knowledge entry not found" });
+  if (!entry) return sendNotFound(response, "Knowledge entry not found");
   response.json(entry);
+});
+
+// --- 人体生物学：系统 → 器官 → 组织 → 细胞 层级 API ---
+
+app.get("/api/body/overview", (_request, response) => {
+  const systems = db
+    .prepare("SELECT * FROM body_systems ORDER BY position")
+    .all()
+    .map((row) => parseJsonFields(row as JsonRow, ["functions"]) as JsonRow);
+  const organRows = db
+    .prepare("SELECT slug, name, system_slug, position_label, summary, hotspot FROM organs")
+    .all()
+    .map((row) => parseJsonFields(row as JsonRow, ["hotspot"]) as JsonRow);
+
+  const organsBySystem = new Map<string, unknown[]>();
+  for (const organ of organRows) {
+    const key = organ.system_slug as string;
+    organsBySystem.set(key, [...(organsBySystem.get(key) ?? []), organ]);
+  }
+
+  response.json({
+    title: "人体",
+    description: "从整体人体出发，沿系统、器官、组织、细胞四个层级逐层深入。",
+    systems: systems.map((system) => ({
+      ...system,
+      organ_count: (organsBySystem.get(system.slug as string) ?? []).length,
+      organs: organsBySystem.get(system.slug as string) ?? []
+    }))
+  });
+});
+
+app.get("/api/body/systems/:slug", (request, response) => {
+  const system = parseJsonFields(
+    db.prepare("SELECT * FROM body_systems WHERE slug = ?").get(request.params.slug) as JsonRow,
+    ["functions"]
+  );
+  if (!system) return sendNotFound(response, "Body system not found");
+
+  const systemOrgans = db
+    .prepare(
+      `SELECT organs.*,
+              (SELECT COUNT(*) FROM tissues WHERE tissues.organ_slug = organs.slug) AS tissue_count,
+              (SELECT COUNT(*) FROM cells
+                 JOIN tissues ON tissues.slug = cells.tissue_slug
+                WHERE tissues.organ_slug = organs.slug) AS cell_count
+         FROM organs WHERE system_slug = ?`
+    )
+    .all(request.params.slug)
+    .map((row) => parseJsonFields(row as JsonRow, ["functions", "facts", "hotspot"]));
+
+  const relatedKnowledge = db
+    .prepare("SELECT * FROM knowledge WHERE system_slug = ? ORDER BY featured DESC")
+    .all(request.params.slug);
+
+  response.json({ ...system, organs: systemOrgans, knowledge: relatedKnowledge });
+});
+
+app.get("/api/body/organs/:slug", (request, response) => {
+  const organ = parseJsonFields(
+    db
+      .prepare(
+        `SELECT organs.*, body_systems.name AS system_name, body_systems.color AS system_color
+           FROM organs JOIN body_systems ON body_systems.slug = organs.system_slug
+          WHERE organs.slug = ?`
+      )
+      .get(request.params.slug) as JsonRow,
+    ["functions", "facts", "hotspot"]
+  );
+  if (!organ) return sendNotFound(response, "Organ not found");
+
+  const organTissues = db
+    .prepare(
+      `SELECT tissues.*,
+              (SELECT COUNT(*) FROM cells WHERE cells.tissue_slug = tissues.slug) AS cell_count
+         FROM tissues WHERE organ_slug = ?`
+    )
+    .all(request.params.slug)
+    .map((row) => parseJsonFields(row as JsonRow, ["functions"]));
+
+  const relatedKnowledge = db
+    .prepare(
+      `SELECT knowledge.* FROM knowledge
+        WHERE organ_slug = ? OR (system_slug = ? AND organ_slug IS NULL)
+        ORDER BY knowledge.featured DESC`
+    )
+    .all(request.params.slug, organ.system_slug as string);
+
+  response.json({ ...organ, tissues: organTissues, knowledge: relatedKnowledge });
+});
+
+app.get("/api/body/tissues/:slug", (request, response) => {
+  const tissue = parseJsonFields(
+    db
+      .prepare(
+        `SELECT tissues.*,
+                organs.name AS organ_name, organs.slug AS organ_slug,
+                organs.system_slug AS system_slug,
+                body_systems.name AS system_name, body_systems.color AS system_color
+           FROM tissues
+           JOIN organs ON organs.slug = tissues.organ_slug
+           JOIN body_systems ON body_systems.slug = organs.system_slug
+          WHERE tissues.slug = ?`
+      )
+      .get(request.params.slug) as JsonRow,
+    ["functions"]
+  );
+  if (!tissue) return sendNotFound(response, "Tissue not found");
+
+  const tissueCells = db
+    .prepare("SELECT * FROM cells WHERE tissue_slug = ? ORDER BY id")
+    .all(request.params.slug);
+
+  response.json({ ...tissue, cells: tissueCells });
+});
+
+app.get("/api/body/cells/:slug", (request, response) => {
+  const cell = db
+    .prepare(
+      `SELECT cells.*,
+              tissues.name AS tissue_name, tissues.slug AS tissue_slug,
+              tissues.organ_slug AS organ_slug,
+              organs.name AS organ_name,
+              body_systems.slug AS system_slug,
+              body_systems.name AS system_name, body_systems.color AS system_color
+         FROM cells
+         JOIN tissues ON tissues.slug = cells.tissue_slug
+         JOIN organs ON organs.slug = tissues.organ_slug
+         JOIN body_systems ON body_systems.slug = organs.system_slug
+        WHERE cells.slug = ?`
+    )
+    .get(request.params.slug);
+  if (!cell) return sendNotFound(response, "Cell not found");
+  response.json(cell);
 });
 
 app.post("/api/interactions", (request, response) => {
