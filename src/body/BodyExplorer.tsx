@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, ArrowLeft, ArrowRight, ArrowUpRight, ChevronRight, Layers, MousePointerClick, Network, Pause, Play, Waves } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, ArrowUpRight, ChevronRight, FlaskConical, Layers, MousePointerClick, Network, Pause, Play, Waves } from "lucide-react";
 import {
   api,
   type BodyCell,
@@ -402,6 +402,16 @@ function BodyOverviewPanel({
           <small>PHYSIOLOGY SIMULATION</small>
           <strong>这些系统如何协同工作？打开生理过程模拟</strong>
           <p>控制时间与状态，观察心率、呼吸、血流与消化的实时联动。</p>
+        </span>
+        <ArrowUpRight size={18} />
+      </button>
+
+      <button className="physio-launch-card lab-entry-card" onClick={() => onNavigate("lab")}>
+        <span className="physio-launch-icon lab-entry-icon"><FlaskConical size={19} /></span>
+        <span className="physio-launch-copy">
+          <small>PHYSIOLOGY STATE LAB</small>
+          <strong>做一组对照实验：变量如何改变多个生理指标？</strong>
+          <p>调节运动强度、环境温度与休息状态，沿时间轴观察恢复，对比两次实验。</p>
         </span>
         <ArrowUpRight size={18} />
       </button>

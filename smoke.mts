@@ -262,5 +262,51 @@ launchCard.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
 await sleep(600);
 assert(window.location.hash === "#physio", "入口卡跳转回生理模拟页");
 
+console.log("\n[12] 生理状态实验室（基础版）");
+window.location.hash = "#lab";
+window.dispatchEvent(new window.Event("hashchange"));
+await sleep(900);
+assert(text().includes("简化生理状态实验室") || text().includes("PHYSIOLOGY STATE LAB"), "渲染实验室页");
+assert(text().includes("运动强度") && text().includes("环境温度") && text().includes("休息状态"), "显示 3 个变量控制");
+assert(text().includes("心率") && text().includes("呼吸频率") && text().includes("核心体温") && text().includes("出汗速率"), "显示 4 个生理指标");
+assert(text().includes("恢复时间轴"), "显示时间轴面板");
+assert(text().includes("模型假设面板"), "显示模型假设面板");
+assert(text().includes("不是真实医学测量数据"), "明确声明非真实医学数据");
+assert(document.querySelectorAll(".lab-timeline-canvas").length === 4, `渲染 4 条指标时间轴（实际 ${document.querySelectorAll(".lab-timeline-canvas").length}）`);
+assert((document.querySelector(".lab-clock")?.textContent ?? "").includes("T+"), "显示模拟时钟");
+assert(text().includes("实验对照（A / B）"), "显示对照功能面板");
+
+// 施加「炎热高强度」并加速，四个指标都应偏离基线
+const hotChip = [...document.querySelectorAll(".lab-scenario-row button")].find((b) =>
+  (b.textContent ?? "").includes("炎热高强度")
+);
+assert(Boolean(hotChip), "存在快速场景填入按钮");
+hotChip.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(150);
+[...document.querySelectorAll(".lab-apply")][0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+const labSpeed16 = [...document.querySelectorAll(".lab-speed button")].find((b) => (b.textContent ?? "").includes("16×"));
+labSpeed16.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(4200); // 真实 4.2s ≈ 67 模拟秒
+const metricValues = () => [...document.querySelectorAll(".lab-metric-card")].map((c) =>
+  parseFloat(c.querySelector(".lab-metric-value")?.textContent ?? "0")
+);
+const stressed = metricValues();
+assert(stressed[0] > 95, `运动+高温后心率偏离基线（当前 ${stressed[0].toFixed(0)}）`);
+assert(stressed[1] > 20, `呼吸频率上升（当前 ${stressed[1].toFixed(0)}）`);
+assert(stressed[2] > 37.3, `核心体温上升（当前 ${stressed[2].toFixed(2)}）`);
+assert(stressed[3] > 400, `出汗大幅增加（当前 ${stressed[3].toFixed(0)} mL/h）`);
+assert(text().includes("偏离中"), "指标状态标记为偏离中");
+
+// 撤去应激进入恢复
+[...document.querySelectorAll(".lab-recover")][0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(300);
+assert(text().includes("恢复中"), "撤去应激后指标标记为恢复中");
+
+// 保存实验 A
+[...document.querySelectorAll(".lab-save.is-a")][0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(300);
+assert(text().includes("实验 A"), "实验可保存为 A");
+assert(document.querySelectorAll(".lab-timeline-canvas").length === 4, "保存对照后时间轴仍正常渲染");
+
 console.log(failures.length ? `\n失败 ${failures.length} 项` : "\n全部冒烟测试通过");
 process.exit(failures.length ? 1 : 0);
