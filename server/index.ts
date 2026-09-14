@@ -1,6 +1,13 @@
 import cors from "cors";
 import express from "express";
-import db from "./db.js";
+import {
+  CATEGORIES,
+  SORTS,
+  type Category,
+  type RecordQuery,
+  type SortKey
+} from "../shared/contract.js";
+import { categoryList, getRecord, getStats, queryRecords } from "./data/store.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 8796);
@@ -9,70 +16,78 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/api/health", (_request, response) => {
-  response.json({ status: "ok", service: "BioLab API" });
+  response.json({ status: "ok", service: "Bio Data Hub API" });
 });
 
-app.get("/api/topics", (_request, response) => {
-  const topics = db.prepare("SELECT * FROM topics ORDER BY position").all();
-  response.json(topics);
+/** 数据域元信息（五大数据分类的统一定义） */
+app.get("/api/categories", (_request, response) => {
+  response.json(categoryList);
 });
 
-app.get("/api/topics/:slug", (request, response) => {
-  const topic = db.prepare("SELECT * FROM topics WHERE slug = ?").get(request.params.slug);
-  if (!topic) return response.status(404).json({ message: "Topic not found" });
-
-  const entries = db
-    .prepare("SELECT * FROM knowledge WHERE topic_slug = ? ORDER BY featured DESC, created_at DESC")
-    .all(request.params.slug);
-  return response.json({ ...topic, knowledge: entries });
+/** 全局聚合统计 */
+app.get("/api/stats", (_request, response) => {
+  response.json(getStats());
 });
 
-app.get("/api/knowledge", (request, response) => {
-  const { topic, featured } = request.query;
-  let sql = `
-    SELECT knowledge.*, topics.name AS topic_name, topics.color AS topic_color
-    FROM knowledge JOIN topics ON topics.slug = knowledge.topic_slug
-  `;
-  const params: string[] = [];
-  const clauses: string[] = [];
+const isCategory = (value: unknown): value is Category =>
+  typeof value === "string" && (CATEGORIES as readonly string[]).includes(value);
 
-  if (typeof topic === "string") {
-    clauses.push("knowledge.topic_slug = ?");
-    params.push(topic);
+const isSort = (value: unknown): value is SortKey =>
+  typeof value === "string" && (SORTS as readonly string[]).includes(value);
+
+/**
+ * 统一记录接口 —— 前端所有主要数据都通过这里获取。
+ * 查询参数：category / theme / dataType / kingdom / q / sort / page / pageSize
+ */
+app.get("/api/records", (request, response) => {
+  const { category, theme, dataType, kingdom, q, sort, page, pageSize } = request.query;
+
+  if (category !== undefined && !isCategory(category)) {
+    return response.status(400).json({ message: `未知的数据域：${String(category)}` });
   }
-  if (featured === "true") clauses.push("knowledge.featured = 1");
-  if (clauses.length) sql += ` WHERE ${clauses.join(" AND ")}`;
-  sql += " ORDER BY knowledge.featured DESC, knowledge.created_at DESC";
+  if (sort !== undefined && !isSort(sort)) {
+    return response.status(400).json({ message: `不支持的排序方式：${String(sort)}` });
+  }
 
-  response.json(db.prepare(sql).all(...params));
+  const query: RecordQuery = {
+    category: category as Category | undefined,
+    theme: typeof theme === "string" && theme ? theme : undefined,
+    dataType: typeof dataType === "string" && dataType ? dataType : undefined,
+    kingdom: typeof kingdom === "string" && kingdom ? kingdom : undefined,
+    q: typeof q === "string" && q.trim() ? q.trim() : undefined,
+    sort: (sort as SortKey) ?? "relevance",
+    page: page !== undefined ? Number(page) : 1,
+    pageSize: pageSize !== undefined ? Number(pageSize) : 12
+  };
+
+  if ([query.page, query.pageSize].some((value) => Number.isNaN(value))) {
+    return response.status(400).json({ message: "分页参数必须是数字" });
+  }
+
+  // 模拟网络/服务延迟，便于观察加载状态
+  setTimeout(() => response.json(queryRecords(query)), 220);
 });
 
-app.get("/api/knowledge/:slug", (request, response) => {
-  const entry = db
-    .prepare(`
-      SELECT knowledge.*, topics.name AS topic_name, topics.color AS topic_color
-      FROM knowledge JOIN topics ON topics.slug = knowledge.topic_slug
-      WHERE knowledge.slug = ?
-    `)
-    .get(request.params.slug);
-  if (!entry) return response.status(404).json({ message: "Knowledge entry not found" });
-  response.json(entry);
+/** 单条记录详情（含跨域关联记录） */
+app.get("/api/records/:id", (request, response) => {
+  const record = getRecord(request.params.id);
+  if (!record) return response.status(404).json({ message: "未找到对应的数据记录" });
+  response.json(record);
 });
 
+/** 保留交互埋点，便于前端记录浏览行为 */
 app.post("/api/interactions", (request, response) => {
-  const { sessionId, eventType, entityType, entitySlug } = request.body ?? {};
-  if (![sessionId, eventType, entityType, entitySlug].every((value) => typeof value === "string")) {
-    return response.status(400).json({ message: "Incomplete interaction payload" });
+  const { sessionId, eventType, entityType, entityId } = request.body ?? {};
+  if (![sessionId, eventType, entityType, entityId].every((value) => typeof value === "string")) {
+    return response.status(400).json({ message: "交互记录字段不完整" });
   }
-
-  db.prepare(`
-    INSERT INTO interactions (session_id, event_type, entity_type, entity_slug)
-    VALUES (?, ?, ?, ?)
-  `).run(sessionId, eventType, entityType, entitySlug);
-
   return response.status(201).json({ recorded: true });
 });
 
+app.use((_request, response) => {
+  response.status(404).json({ message: "接口不存在" });
+});
+
 app.listen(port, () => {
-  console.log(`BioLab API is running at http://localhost:${port}`);
+  console.log(`Bio Data Hub API is running at http://localhost:${port}`);
 });

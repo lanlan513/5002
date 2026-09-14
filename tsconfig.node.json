@@ -12,5 +12,5 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["vite.config.ts", "server"]
+  "include": ["vite.config.ts", "server", "shared"]
 }
