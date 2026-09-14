@@ -126,8 +126,12 @@ export default function FoodWeb({ nodes, links, accent, selectedId, onSelect, vi
   const { positioned, width, height } = useMemo(() => layout(nodes), [nodes]);
   const [overrides, setOverrides] = useState<Record<string, { x: number; y: number }>>({});
   const [hovered, setHovered] = useState<string | null>(null);
-  const dragRef = useRef<{ id: string; dx: number; dy: number; moved: boolean } | null>(null);
-  const suppressClickRef = useRef(false);
+  // 按下后允许 5px 以内的手抖，超出阈值才算真正的拖拽
+  const dragRef = useRef<
+    { id: string; dx: number; dy: number; startX: number; startY: number; dragging: boolean } | null
+  >(null);
+  // 标记「本次 click 已由 pointerup 处理」，避免 pointerup 与合成 click 双重切换选中态
+  const handledClickRef = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const place = (node: Positioned) => overrides[node.id] ?? node;
@@ -160,11 +164,17 @@ export default function FoodWeb({ nodes, links, accent, selectedId, onSelect, vi
     };
   };
 
+  const DRAG_THRESHOLD = 5;
+
   const onPointerMove = (event: React.PointerEvent) => {
     const drag = dragRef.current;
     if (!drag) return;
     const point = toSvgPoint(event);
-    drag.moved = true;
+    const distX = point.x - drag.startX;
+    const distY = point.y - drag.startY;
+    // 阈值内的位移视为手抖：不更新位置，也不进入拖拽态，点击仍然有效
+    if (!drag.dragging && Math.hypot(distX, distY) < DRAG_THRESHOLD) return;
+    drag.dragging = true;
     setOverrides((current) => ({
       ...current,
       [drag.id]: {
@@ -172,6 +182,20 @@ export default function FoodWeb({ nodes, links, accent, selectedId, onSelect, vi
         y: Math.min(height - 20, Math.max(20, point.y - drag.dy))
       }
     }));
+  };
+
+  const endPointer = () => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    // 无论点击还是拖拽都吞掉随后合成的 click：
+    // 点击时选中已在此处理；拖拽结束的合成 click 不应误触发选中。
+    // 指针捕获会在 pointerup 后由浏览器自动释放。
+    handledClickRef.current = true;
+    if (!drag.dragging) {
+      // 阈值内松手 = 正常点击（含轻微手抖），切换选中态
+      onSelect(selectedId === drag.id ? null : drag.id);
+    }
+    dragRef.current = null;
   };
 
   const linkPath = (link: GraphLink) => {
@@ -209,11 +233,12 @@ export default function FoodWeb({ nodes, links, accent, selectedId, onSelect, vi
         role="img"
         aria-label="生态系统食物网关系图"
         onPointerMove={onPointerMove}
-        onPointerUp={() => {
-          if (dragRef.current?.moved) suppressClickRef.current = true;
-          dragRef.current = null;
+        onPointerUp={endPointer}
+        onPointerCancel={() => (dragRef.current = null)}
+        onPointerLeave={() => {
+          // 捕获期间指针移出不中断拖拽；未捕获时清理按下态
+          if (dragRef.current && !dragRef.current.dragging) dragRef.current = null;
         }}
-        onPointerLeave={() => (dragRef.current = null)}
       >
         <defs>
           {Object.entries(LINK_STYLES)
@@ -311,16 +336,40 @@ export default function FoodWeb({ nodes, links, accent, selectedId, onSelect, vi
               className="web-node"
               transform={`translate(${point.x} ${point.y})`}
               opacity={dimmed ? 0.18 : 1}
+              role="button"
+              tabIndex={0}
+              aria-pressed={active}
+              aria-label={`${node.name}：点击查看食物、天敌与局部网络`}
               onPointerEnter={() => setHovered(node.id)}
               onPointerLeave={() => setHovered(null)}
               onPointerDown={(event) => {
+                if (event.button !== 0 && event.pointerType === "mouse") return;
                 const pointInSvg = toSvgPoint(event);
-                dragRef.current = { id: node.id, dx: pointInSvg.x - point.x, dy: pointInSvg.y - point.y, moved: false };
-                svgRef.current?.setPointerCapture?.(event.pointerId);
+                handledClickRef.current = false;
+                dragRef.current = {
+                  id: node.id,
+                  dx: pointInSvg.x - point.x,
+                  dy: pointInSvg.y - point.y,
+                  startX: pointInSvg.x,
+                  startY: pointInSvg.y,
+                  dragging: false
+                };
+                // 必须捕获到节点自身而非 svg：否则 pointerup 被重定向到 svg，
+                // 合成 click 的目标变成 svg，节点的选中逻辑永远不触发
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+                event.preventDefault();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelect(selectedId === node.id ? null : node.id);
+                }
               }}
               onClick={() => {
-                if (suppressClickRef.current) { // 拖拽后不触发选中
-                  suppressClickRef.current = false;
+                // 正常点击已在 pointerup 中处理，这里只吸收合成 click 防重复切换；
+                // 键盘激活没有 pointer 事件，handledClickRef 为 false，正常选中
+                if (handledClickRef.current) {
+                  handledClickRef.current = false;
                   return;
                 }
                 onSelect(selectedId === node.id ? null : node.id);

@@ -161,7 +161,9 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 /* 邻里节点上的方向标签（食物 / 天敌 / 竞争者…） */
 .node-direction rect { stroke-width: 1; }
 .node-direction text { font: 9px "DM Mono", monospace; dominant-baseline: central; letter-spacing: .5px; pointer-events: none; }
-.web-node { cursor: pointer; transition: opacity .2s; }
+.web-node { cursor: pointer; transition: opacity .2s; outline: none; }
+.web-node:focus-visible .node-halo { opacity: .45; }
+.web-node:focus-visible circle:nth-of-type(2) { stroke-width: 2.6; }
 .web-node .node-glyph { text-anchor: middle; dominant-baseline: central; font-size: 13px; font-weight: 600; pointer-events: none; }
 .web-node .node-label { text-anchor: middle; fill: #cfe0d6; font-size: 11.5px; pointer-events: none; }
 .foodweb-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 14px 4.6vw 26px; color: #8ba296; font-size: 11px; }
