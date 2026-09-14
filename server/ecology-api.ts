@@ -270,16 +270,20 @@ router.post("/relationships", (request, response) => {
   const ecosystemExists = db.prepare("SELECT 1 FROM ecosystems WHERE slug = ?").get(ecosystem);
   if (!ecosystemExists) return response.status(404).json({ message: `生态系统「${ecosystem}」不存在` });
 
-  // 关系两端必须已经属于该生态系统（物种经成员表，环境因素经因素表）
-  const nodeExists = db
-    .prepare(`
-      SELECT 1 FROM ecosystem_species WHERE ecosystem_slug = ? AND species_slug = ?
-      UNION
-      SELECT 1 FROM ecosystem_factors WHERE ecosystem_slug = ? AND factor_slug = ?
-    `)
-    .get(ecosystem, from, ecosystem, to);
-  if (!nodeExists) {
-    return response.status(400).json({ message: "关系两端的节点必须先加入该生态系统" });
+  // 关系两端必须分别都属于该生态系统（物种经成员表，环境因素经因素表）。
+  // 注意：不能用一条 UNION 同时校验两端——任一端命中即返回行，会放过另一端悬空。
+  const nodeInEcosystem = db.prepare(`
+    SELECT 1 FROM ecosystem_species WHERE ecosystem_slug = ? AND species_slug = ?
+    UNION
+    SELECT 1 FROM ecosystem_factors WHERE ecosystem_slug = ? AND factor_slug = ?
+  `);
+  const fromExists = nodeInEcosystem.get(ecosystem, from, ecosystem, from);
+  if (!fromExists) {
+    return response.status(400).json({ message: `起点「${from}」尚未加入生态系统「${ecosystem}」` });
+  }
+  const toExists = nodeInEcosystem.get(ecosystem, to, ecosystem, to);
+  if (!toExists) {
+    return response.status(400).json({ message: `终点「${to}」尚未加入生态系统「${ecosystem}」` });
   }
 
   const duplicated = db
