@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Microscope, PlayCircle, Workflow } from "lucide-react";
+import { ArrowLeft, FlaskConical, Microscope, PlayCircle, Workflow } from "lucide-react";
 import { api } from "../api";
 import type { CellDetail, CellSummary, OrganelleDetail, ProcessSummary, RelationGraph as RelationGraphData, RelationSelection } from "../types";
+import LabExplorer from "../lab/LabExplorer";
 import CellCanvas from "./CellCanvas";
 import CompareModal from "./CompareModal";
 import InfoPanel from "./InfoPanel";
@@ -10,7 +11,7 @@ import RelationGraph from "./RelationGraph";
 import RelationPanel from "./RelationPanel";
 import { cellIcon } from "./cellIcons";
 
-type ExplorerView = "structure" | "relations" | "process";
+type ExplorerView = "structure" | "relations" | "process" | "lab";
 
 export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) => void }) {
   const [cells, setCells] = useState<CellSummary[]>([]);
@@ -256,6 +257,14 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
           >
             <PlayCircle size={14} /> 生命过程
           </button>
+          <button
+            role="tab"
+            aria-selected={view === "lab"}
+            className={`view-toggle-btn ${view === "lab" ? "is-active" : ""}`}
+            onClick={() => switchView("lab")}
+          >
+            <FlaskConical size={14} /> 虚拟实验室
+          </button>
         </div>
         <div className="cell-tabs" role="tablist" aria-label="选择细胞类型">
           {cells.map((item) => {
@@ -442,6 +451,15 @@ export default function CellExplorer({ onNavigate }: { onNavigate: (to: string) 
           onSwitchCell={(cellId) => {
             void loadCell(cellId).then(() => setView("structure"));
           }}
+          onTrack={(entity, id) => void api.track(entity, id)}
+        />
+      )}
+
+      {view === "lab" && (
+        <LabExplorer
+          cells={cells}
+          cell={cell}
+          onSwitchCell={(cellId) => void loadCell(cellId)}
           onTrack={(entity, id) => void api.track(entity, id)}
         />
       )}

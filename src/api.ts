@@ -1,4 +1,14 @@
-import type { CellDetail, CellSummary, OrganelleDetail, ProcessDetail, ProcessSummary, RelationGraph } from "./types";
+import type {
+  CellDetail,
+  CellSummary,
+  LabExperiment,
+  LabRun,
+  LabRunListItem,
+  OrganelleDetail,
+  ProcessDetail,
+  ProcessSummary,
+  RelationGraph
+} from "./types";
 
 export type Topic = {
   id: number;
@@ -34,6 +44,19 @@ const getJson = async <T>(path: string): Promise<T> => {
   return response.json() as Promise<T>;
 };
 
+const postJson = async <T>(path: string, payload: unknown): Promise<T> => {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message ?? `Request failed: ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+};
+
 export const api = {
   topics: () => getJson<Topic[]>("/api/topics"),
   knowledge: () => getJson<Knowledge[]>("/api/knowledge?featured=true"),
@@ -47,6 +70,13 @@ export const api = {
   /* 生命过程动态模拟 */
   processes: () => getJson<{ processes: ProcessSummary[] }>("/api/processes"),
   process: (id: string) => getJson<ProcessDetail>(`/api/processes/${id}`),
+  /* 虚拟实验室（教学模型） */
+  labExperiments: () => getJson<{ experiments: LabExperiment[]; disclaimer: string }>("/api/lab/experiments"),
+  labRun: (experimentId: string, cellId: string, params: Record<string, number>) =>
+    postJson<LabRun>("/api/lab/run", { experimentId, cellId, params }),
+  labRuns: () => getJson<{ runs: LabRunListItem[] }>("/api/lab/runs"),
+  labRunDetail: (id: number) => getJson<LabRun>(`/api/lab/runs/${id}`),
+  labClearRuns: () => fetch("/api/lab/runs", { method: "DELETE" }).then(() => undefined),
   track: (entityType: string, entitySlug: string) =>
     fetch("/api/interactions", {
       method: "POST",

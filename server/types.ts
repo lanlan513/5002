@@ -219,3 +219,50 @@ export interface ProcessSeed {
   entities: ProcessEntitySeed[];
   steps: ProcessStepSeed[];
 }
+
+/* ---------- 虚拟实验室（教学模型） ---------- */
+
+/** 一个可调节的环境条件（前端渲染为滑杆） */
+export interface LabParamSeed {
+  id: string;
+  label: string;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+  /** 该条件的生物学含义说明 */
+  description: string;
+}
+
+/** 一个可观察变量（运行后以曲线展示） */
+export interface LabVariableSeed {
+  id: string;
+  label: string;
+  unit: string;
+  color: string;
+  /** 图表 y 轴范围（教学模型的约定量程） */
+  min: number;
+  max: number;
+  decimals: number;
+}
+
+export interface LabExperimentSeed {
+  id: string;
+  name: string;
+  englishName: string;
+  icon: string;
+  summary: string;
+  /** 探究问题 */
+  question: string;
+  /** 适用细胞（细胞类型 id） */
+  cellIds: CellTypeId[];
+  /** 虚拟实验时长 */
+  duration: number;
+  timeUnit: string;
+  params: LabParamSeed[];
+  variables: LabVariableSeed[];
+  /** 相关知识点 */
+  notes: string[];
+  position: number;
+}

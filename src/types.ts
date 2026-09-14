@@ -205,3 +205,85 @@ export interface EntityState {
   opacity: number;
   dashOffset: number | null;
 }
+
+/* ---------- 虚拟实验室（教学模型） ---------- */
+
+/** 一个可调节的环境条件定义（滑杆） */
+export interface LabParamDef {
+  id: string;
+  label: string;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+  description: string;
+}
+
+/** 一个可观察变量定义（曲线 + 实时读数） */
+export interface LabVariableDef {
+  id: string;
+  label: string;
+  unit: string;
+  color: string;
+  min: number;
+  max: number;
+  decimals: number;
+}
+
+export interface LabExperiment {
+  id: string;
+  name: string;
+  englishName: string;
+  icon: string;
+  summary: string;
+  question: string;
+  cellIds: string[];
+  duration: number;
+  timeUnit: string;
+  params: LabParamDef[];
+  variables: LabVariableDef[];
+  notes: string[];
+  position: number;
+}
+
+export interface LabEvent {
+  time: number;
+  text: string;
+}
+
+export type LabStatus = "normal" | "active" | "stressed" | "damaged";
+
+export interface LabRunSummary {
+  status: LabStatus;
+  statusLabel: string;
+  findings: string[];
+}
+
+/** 一次虚拟实验的完整结果：时间序列 + 事件 + 解读 */
+export interface LabResult {
+  times: number[];
+  series: Record<string, number[]>;
+  events: LabEvent[];
+  summary: LabRunSummary;
+}
+
+/** 一条完整的实验记录（含曲线数据，可回放） */
+export interface LabRun {
+  id: number;
+  experimentId: string;
+  cellId: string;
+  params: Record<string, number>;
+  result: LabResult;
+  createdAt: string;
+}
+
+/** 实验记录列表项（不含曲线数据） */
+export interface LabRunListItem {
+  id: number;
+  experimentId: string;
+  cellId: string;
+  params: Record<string, number>;
+  summary: LabRunSummary;
+  createdAt: string;
+}

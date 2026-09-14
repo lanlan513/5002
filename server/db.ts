@@ -3,6 +3,7 @@ import { knowledge, topics } from "./seed.js";
 import { cellSeeds, organelleSeeds } from "./cellSeed.js";
 import { processSeeds } from "./processSeed.js";
 import { relationChainSeeds, relationEdgeSeeds, relationNodeSeeds } from "./relationSeed.js";
+import { labExperimentSeeds } from "./labSeed.js";
 
 const db = new Database("biolab.db");
 db.pragma("journal_mode = WAL");
@@ -171,6 +172,33 @@ db.exec(`
     metric_values TEXT NOT NULL,     -- JSON 数组：每一步结束时的取值（values 为保留字）
     position INTEGER NOT NULL,
     PRIMARY KEY (process_id, metric_id)
+  );
+
+  /* ---------- 虚拟实验室（教学模型） ---------- */
+
+  CREATE TABLE IF NOT EXISTS lab_experiments (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    english_name TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    question TEXT NOT NULL,          -- 探究问题
+    cell_ids TEXT NOT NULL,          -- JSON 数组：适用细胞
+    duration REAL NOT NULL,          -- 虚拟实验时长
+    time_unit TEXT NOT NULL,
+    params TEXT NOT NULL,            -- JSON 数组：可调环境条件定义
+    variables TEXT NOT NULL,         -- JSON 数组：可观察变量定义
+    notes TEXT NOT NULL,             -- JSON 数组：相关知识点
+    position INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS lab_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    experiment_id TEXT NOT NULL REFERENCES lab_experiments(id),
+    cell_id TEXT NOT NULL,
+    params TEXT NOT NULL,            -- JSON：本次运行的条件取值
+    result TEXT NOT NULL,            -- JSON：时间序列 + 事件 + 结果解读
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 `);
 
@@ -351,6 +379,30 @@ if (hasProcesses.count === 0) {
         })
       );
     });
+  })();
+}
+
+/* ---------- 虚拟实验室种子 ---------- */
+
+const hasLabExperiments = db.prepare("SELECT COUNT(*) AS count FROM lab_experiments").get() as { count: number };
+if (hasLabExperiments.count === 0) {
+  const insertExperiment = db.prepare(`
+    INSERT INTO lab_experiments
+      (id, name, english_name, icon, summary, question, cell_ids, duration, time_unit, params, variables, notes, position)
+    VALUES
+      (@id, @name, @englishName, @icon, @summary, @question, @cellIds, @duration, @timeUnit, @params, @variables, @notes, @position)
+  `);
+
+  db.transaction(() => {
+    labExperimentSeeds.forEach((experiment) =>
+      insertExperiment.run({
+        ...experiment,
+        cellIds: JSON.stringify(experiment.cellIds),
+        params: JSON.stringify(experiment.params),
+        variables: JSON.stringify(experiment.variables),
+        notes: JSON.stringify(experiment.notes)
+      })
+    );
   })();
 }
 

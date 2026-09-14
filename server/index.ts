@@ -1,6 +1,9 @@
 import cors from "cors";
 import express from "express";
 import db from "./db.js";
+import { LAB_DISCLAIMER } from "./labSeed.js";
+import { runLabSimulation, type LabRunResult } from "./labModel.js";
+import type { CellTypeId, LabExperimentSeed } from "./types.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 8791);
@@ -416,6 +419,135 @@ app.get("/api/processes/:id", (request, response) => {
     entities,
     metrics
   });
+});
+
+/* ---------- 虚拟实验室 API（教学模型） ---------- */
+
+interface LabExperimentRow {
+  id: string;
+  name: string;
+  english_name: string;
+  icon: string;
+  summary: string;
+  question: string;
+  cell_ids: string;
+  duration: number;
+  time_unit: string;
+  params: string;
+  variables: string;
+  notes: string;
+  position: number;
+}
+
+interface LabRunRow {
+  id: number;
+  experiment_id: string;
+  cell_id: string;
+  params: string;
+  result: string;
+  created_at: string;
+}
+
+const parseLabExperiment = (row: LabExperimentRow): LabExperimentSeed => ({
+  id: row.id,
+  name: row.name,
+  englishName: row.english_name,
+  icon: row.icon,
+  summary: row.summary,
+  question: row.question,
+  cellIds: JSON.parse(row.cell_ids) as CellTypeId[],
+  duration: row.duration,
+  timeUnit: row.time_unit,
+  params: JSON.parse(row.params) as LabExperimentSeed["params"],
+  variables: JSON.parse(row.variables) as LabExperimentSeed["variables"],
+  notes: JSON.parse(row.notes) as string[],
+  position: row.position
+});
+
+const getLabExperiment = (id: string) => {
+  const row = db.prepare("SELECT * FROM lab_experiments WHERE id = ?").get(id) as LabExperimentRow | undefined;
+  return row ? parseLabExperiment(row) : null;
+};
+
+/** 实验定义列表（含参数与观察变量定义），附统一的教学模型声明 */
+app.get("/api/lab/experiments", (_request, response) => {
+  const experiments = (
+    db.prepare("SELECT * FROM lab_experiments ORDER BY position").all() as LabExperimentRow[]
+  ).map(parseLabExperiment);
+  response.json({ experiments, disclaimer: LAB_DISCLAIMER });
+});
+
+/** 运行一次虚拟实验：按条件生成时间序列，并把过程与结果写入实验记录 */
+app.post("/api/lab/run", (request, response) => {
+  const { experimentId, cellId, params } = request.body ?? {};
+  if (typeof experimentId !== "string" || typeof cellId !== "string") {
+    return response.status(400).json({ message: "缺少实验或细胞参数" });
+  }
+  const experiment = getLabExperiment(experimentId);
+  if (!experiment) return response.status(404).json({ message: "未找到该实验" });
+  if (!experiment.cellIds.includes(cellId as CellTypeId)) {
+    return response.status(400).json({ message: "该实验不适用于此细胞类型" });
+  }
+
+  /* 只接受已定义的参数，并裁剪到定义的量程内 */
+  const cleanParams: Record<string, number> = {};
+  for (const def of experiment.params) {
+    const raw = typeof params?.[def.id] === "number" ? (params[def.id] as number) : def.defaultValue;
+    cleanParams[def.id] = Math.min(def.max, Math.max(def.min, raw));
+  }
+
+  const result: LabRunResult = runLabSimulation(experiment.id, cellId as CellTypeId, cleanParams);
+
+  const inserted = db
+    .prepare("INSERT INTO lab_runs (experiment_id, cell_id, params, result) VALUES (?, ?, ?, ?)")
+    .run(experiment.id, cellId, JSON.stringify(cleanParams), JSON.stringify(result));
+
+  return response.status(201).json({
+    id: inserted.lastInsertRowid,
+    experimentId: experiment.id,
+    cellId,
+    params: cleanParams,
+    result,
+    createdAt: new Date().toISOString()
+  });
+});
+
+/** 实验记录列表（不含完整曲线数据，供记录面板展示） */
+app.get("/api/lab/runs", (_request, response) => {
+  const runs = (
+    db.prepare("SELECT * FROM lab_runs ORDER BY id DESC LIMIT 50").all() as LabRunRow[]
+  ).map((row) => {
+    const result = JSON.parse(row.result) as LabRunResult;
+    return {
+      id: row.id,
+      experimentId: row.experiment_id,
+      cellId: row.cell_id,
+      params: JSON.parse(row.params) as Record<string, number>,
+      summary: result.summary,
+      createdAt: row.created_at
+    };
+  });
+  response.json({ runs });
+});
+
+/** 单条实验记录的完整数据（含时间序列，用于回放） */
+app.get("/api/lab/runs/:id", (request, response) => {
+  const row = db.prepare("SELECT * FROM lab_runs WHERE id = ?").get(request.params.id) as LabRunRow | undefined;
+  if (!row) return response.status(404).json({ message: "未找到该实验记录" });
+  return response.json({
+    id: row.id,
+    experimentId: row.experiment_id,
+    cellId: row.cell_id,
+    params: JSON.parse(row.params) as Record<string, number>,
+    result: JSON.parse(row.result) as LabRunResult,
+    createdAt: row.created_at
+  });
+});
+
+/** 清空实验记录 */
+app.delete("/api/lab/runs", (_request, response) => {
+  db.prepare("DELETE FROM lab_runs").run();
+  response.json({ cleared: true });
 });
 
 app.post("/api/interactions", (request, response) => {
