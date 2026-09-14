@@ -154,5 +154,52 @@ await settle(700);
 body = text();
 check("重试后恢复数据（出现细胞记录）", body.includes("CD8") || exists(".record-card"));
 
+// ── 9. 逐字符输入：保持焦点、不重挂载、多字符检索完成 ──────
+console.log("\n[9] 连续键入搜索");
+await go("#/data");
+const search = () => rootEl.querySelector<HTMLInputElement>(".search-box input");
+const inputEl = search();
+check("搜索框存在", !!inputEl);
+inputEl!.focus();
+const nodeBefore = search();
+const activeBefore = rootEl.ownerDocument.activeElement === inputEl;
+check("键入前搜索框已聚焦", activeBefore);
+
+// 模拟逐字符输入 B-R-C-A-1。
+// jsdom + React19 下手工派发的原生 input 事件不进入 React 的 change 检测，
+// 因此通过节点上的 React props 直接派发 onChange（会真实执行组件的 onQueryChange），
+// 同样能验证“不重挂载、焦点保持、URL 每次更新、多字符检索完成”。
+const fullTerm = "BRCA1";
+const hashLog: string[] = [];
+const onHash = () => hashLog.push(window.location.hash);
+window.addEventListener("hashchange", onHash);
+for (const ch of fullTerm.split("")) {
+  const el = search() as HTMLInputElement & Record<string, unknown>;
+  const next = (el.value || "") + ch;
+  const propsKey = Object.keys(el).find((key) => key.startsWith("__reactProps"))!;
+  act(() => {
+    el.focus();
+    el.value = next;
+    (el[propsKey] as { onChange: (e: { target: HTMLInputElement }) => void }).onChange({ target: el });
+  });
+}
+check("逐字符输入后值完整（未被重挂载截断）", search()!.value === "BRCA1");
+check("输入框 DOM 节点未被重建（无整页重挂载）", search() === nodeBefore);
+check("连续键入过程中焦点始终保留", rootEl.ownerDocument.activeElement === search());
+// 等待 300ms 防抖 + 网络完成
+await settle(700);
+body = text();
+check("多字符检索完成并命中 BRCA1", body.includes("BRCA1"));
+window.removeEventListener("hashchange", onHash);
+check("每次按键都同步了 URL（无旧值覆盖）", hashLog.length === fullTerm.length);
+check("URL 已反映搜索词", window.location.hash.includes("q=BRCA1"));
+
+// 清除：点输入框清除按钮后值与结果复位
+await act(async () => {
+  rootEl.querySelector<HTMLElement>(".search-clear")?.click();
+});
+await settle(600);
+check("清除按钮可清空搜索", search()!.value === "");
+
 console.log(failures === 0 ? "\n🎉 全部冒烟测试通过" : `\n⚠️  ${failures} 项失败`);
 process.exit(failures === 0 ? 0 : 1);

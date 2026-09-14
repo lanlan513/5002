@@ -14,29 +14,43 @@ type FilterField = "category" | "theme" | "dataType" | "kingdom";
 
 export function DataBrowser({
   categories,
-  initial,
+  params,
   navigate,
   onOpenRecord
 }: {
   categories: CategoryMeta[];
-  initial: URLSearchParams;
+  params: URLSearchParams;
   navigate: (path: string, params?: Record<string, string | number | undefined>) => void;
   onOpenRecord: (id: string) => void;
 }) {
   const [facetsOpen, setFacetsOpen] = useState(false);
 
-  /** 所有查询条件都存放在 URL 里：可分享、可后退、刷新不丢失 */
-  const category = initial.get("category") ?? "";
-  const theme = initial.get("theme") ?? "";
-  const dataType = initial.get("dataType") ?? "";
-  const kingdom = initial.get("kingdom") ?? "";
-  const q = initial.get("q") ?? "";
-  const sort = (initial.get("sort") as SortKey | null) ?? "relevance";
-  const page = Math.max(1, Number(initial.get("page") ?? "1") || 1);
+  /** 所有查询条件都存放在 URL 里：可分享、可后退、刷新不丢失。直接从 props 响应式读取。 */
+  const category = params.get("category") ?? "";
+  const theme = params.get("theme") ?? "";
+  const dataType = params.get("dataType") ?? "";
+  const kingdom = params.get("kingdom") ?? "";
+  const urlQuery = params.get("q") ?? "";
+  const sort = (params.get("sort") as SortKey | null) ?? "relevance";
+  const page = Math.max(1, Number(params.get("page") ?? "1") || 1);
 
-  /** 搜索框本地状态，与 URL 解耦后由 hook 防抖，避免逐字符请求 */
-  const [searchInput, setSearchInput] = useState(q);
+  /**
+   * 搜索框本地状态：连续键入时只更新本地状态（+防抖请求），不重挂载、不失焦。
+   * 仅当 URL 中的 q 来自外部变化（前进/后退、页头入口、主题标签跳转）时才回填。
+   */
+  const [searchInput, setSearchInput] = useState(urlQuery);
   const searchRef = useRef<HTMLInputElement>(null);
+  const lastPushedQuery = useRef<string | undefined>(urlQuery.trim() || undefined);
+
+  useEffect(() => {
+    const incoming = urlQuery.trim() || undefined;
+    if (incoming !== lastPushedQuery.current && incoming !== searchInput.trim()) {
+      setSearchInput(urlQuery);
+    }
+    lastPushedQuery.current = incoming;
+    // 仅以 URL 的 q 为同步源，避免本地键入触发该 effect 覆盖输入
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlQuery]);
 
   useEffect(() => {
     const focus = () => searchRef.current?.focus();
@@ -87,10 +101,21 @@ export function DataBrowser({
   const go = (overrides: Record<string, string | number | undefined>) =>
     navigate("/data", currentParams(overrides));
 
-  // 搜索输入：更新本地状态（防抖触发请求），同时同步到 URL（重置分页）
+  // 搜索输入：更新本地状态（防抖触发请求，输入框不重挂载、不失焦），同时同步到 URL（重置分页）。
+  // 直接透传本次输入值，不依赖可能尚未刷新的 searchInput 闭包，避免快速键入时 URL 的 q 被旧值覆盖。
   const onQueryChange = (value: string) => {
+    const normalized = value.trim() || undefined;
+    lastPushedQuery.current = normalized;
     setSearchInput(value);
-    go({ q: value.trim() || undefined, page: 1 });
+    navigate("/data", {
+      category: category || undefined,
+      theme: theme || undefined,
+      dataType: dataType || undefined,
+      kingdom: kingdom || undefined,
+      q: normalized,
+      sort: sort !== "relevance" ? sort : undefined,
+      page: 1
+    });
   };
 
   const onToggleFacet = (field: FilterField, key: string) =>
@@ -99,6 +124,7 @@ export function DataBrowser({
   const onRemoveFilter = (field: FilterField) => go({ [field]: undefined, page: 1 });
 
   const onClear = () => {
+    lastPushedQuery.current = undefined;
     setSearchInput("");
     navigate("/data", { sort: sort !== "relevance" ? sort : undefined });
   };

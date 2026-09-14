@@ -61,7 +61,8 @@ export function App() {
   /** 全局搜索入口：进入数据页并聚焦搜索框（已在数据页时直接聚焦） */
   const focusSearch = () => {
     if (route.path !== "/data") goData();
-    window.dispatchEvent(new CustomEvent("biodatahub:focus-search"));
+    // 跨页面跳转时数据页可能尚未挂载，下一帧再派发以确保监听器就绪
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent("biodatahub:focus-search")), 60);
   };
 
   const categoryList = categories.state.status === "success" ? categories.state.data : [];
@@ -80,9 +81,8 @@ export function App() {
     if (route.path === "/data") {
       return (
         <DataBrowser
-          key={route.params.toString()}
           categories={categoryList}
-          initial={route.params}
+          params={route.params}
           navigate={navigate}
           onOpenRecord={openRecord}
         />
