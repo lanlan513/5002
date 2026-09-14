@@ -69,6 +69,24 @@ export type GeneticsSearchResult = {
   concepts: GeneticConcept[];
 };
 
+export type ChallengeProgress = {
+  questionId: string;
+  attempts: number;
+  solved: number;
+  lastAt: string;
+};
+
+/** 稳定的访客会话 id：挑战模式的实验记录按它归集，跨页面与刷新保持一致 */
+const getSessionId = (): string => {
+  const KEY = "biolab-session";
+  let id = window.localStorage.getItem(KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    window.localStorage.setItem(KEY, id);
+  }
+  return id;
+};
+
 const getJson = async <T>(path: string): Promise<T> => {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
@@ -85,12 +103,20 @@ export const api = {
   gene: (slug: string) => getJson<Gene>(`/api/genetics/genes/${slug}`),
   geneticsSearch: (query: string) =>
     getJson<GeneticsSearchResult>(`/api/genetics/search?q=${encodeURIComponent(query)}`),
+  challengeProgress: () =>
+    getJson<ChallengeProgress[]>(`/api/challenges/progress?sessionId=${getSessionId()}`),
+  recordChallenge: (payload: { questionId: string; level: number; correct: boolean; selected: string }) =>
+    fetch("/api/challenges/attempts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: getSessionId(), ...payload })
+    }),
   track: (entityType: string, entitySlug: string) =>
     fetch("/api/interactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sessionId: window.sessionStorage.getItem("biolab-session") ?? crypto.randomUUID(),
+        sessionId: getSessionId(),
         eventType: "explore",
         entityType,
         entitySlug

@@ -468,6 +468,20 @@ function GeneticsPage({
         </button>
       </section>
 
+      <section className="mendel-banner challenge-banner">
+        <div className="mendel-banner-copy">
+          <p className="eyebrow">GENETICS CHALLENGE / 挑战模式</p>
+          <h2>遗传学挑战模式</h2>
+          <p>
+            根据系统给出的亲本条件预测后代结果。提交答案后，正确概率、遗传棋盘格与完整推导过程
+            会一并展开。题目从单基因遗传逐渐加深，完成的实验会被一一记录。
+          </p>
+        </div>
+        <button className="mendel-banner-cta" onClick={() => onNavigate("challenge")}>
+          进入挑战 <ArrowUpRight size={17} />
+        </button>
+      </section>
+
       <section className="genetics-explorer">
         <div className="section-intro">
           <p className="eyebrow">HIERARCHY / 层级模型</p>

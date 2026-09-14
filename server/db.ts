@@ -48,6 +48,16 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS challenge_attempts (
+    id INTEGER PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    question_id TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    correct INTEGER NOT NULL DEFAULT 0,
+    selected TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS chromosomes (
     id INTEGER PRIMARY KEY,
     slug TEXT UNIQUE NOT NULL,

@@ -506,6 +506,102 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 .caveat-card p { margin: 0; font-size: 13px; line-height: 1.85; color: #b9cdc2; }
 .caveats-footer { margin-top: 34px; }
 
+/* ----------------------------- 遗传学挑战模式 ----------------------------- */
+/* 挑战模式以蓝色为识别色，与模拟器（金）、突变实验室（绿）区分 */
+.challenge-page { background: #071314; color: #e8f2ed; }
+.challenge-hero::after { border-color: rgba(143, 184, 239, .16); }
+.challenge-hero .eyebrow { color: #8fb8ef; }
+.challenge-hero .mendel-cross-title { border-color: rgba(143, 184, 239, .3); }
+.challenge-hero .mendel-cross-title strong { color: #dde9fb; }
+.challenge-hero .cross-mark { color: #8fb8ef; }
+.challenge-hero .cross-tag { border-color: rgba(143, 184, 239, .42); color: #a9c8f5; }
+.cross-tag-solved { display: inline-flex; align-items: center; gap: 5px; border-color: rgba(142, 224, 168, .5); color: #8ee0a8; }
+.challenge-stats div { border-top-color: rgba(143, 184, 239, .4); }
+.challenge-stats strong { color: #e4edfb; }
+.challenge-stats strong small { font: 500 14px "Source Serif 4", serif; color: #8ea5c9; }
+
+/* 等级与题目列表（浅色） */
+.challenge-levels { background: #e5eee9; color: #112520; padding: 88px 4.6vw 64px; }
+.challenge-level { margin-bottom: 58px; }
+.challenge-level:last-child { margin-bottom: 0; }
+.challenge-level-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.level-badge { padding: 4px 12px; border: 1px solid rgba(70, 108, 180, .45); border-radius: 999px; color: #3f6392; font: 10px "DM Mono", monospace; letter-spacing: 1.5px; }
+.challenge-level-head h2 { margin: 0; font: 400 30px "Source Serif 4", serif; color: #112520; }
+.level-progress { margin-left: auto; font: 11px "DM Mono", monospace; color: #638075; }
+.challenge-level-head p { flex-basis: 100%; margin: 0; color: #5f746c; font-size: 13px; line-height: 1.75; }
+.challenge-level.is-locked .challenge-level-head { opacity: .6; }
+.challenge-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.challenge-card { position: relative; display: flex; flex-direction: column; gap: 9px; min-height: 192px; padding: 20px; text-align: left; color: inherit; background: transparent; border: 1px solid #c0d1c8; border-radius: 4px; transition: border-color .2s, background .2s, transform .2s; }
+.challenge-card:hover:not(:disabled) { border-color: #3f6392; background: #f3f8f4; transform: translateY(-3px); }
+.challenge-card:disabled { cursor: not-allowed; opacity: .55; }
+.challenge-card.is-solved { border-color: rgba(46, 125, 84, .55); background: rgba(142, 224, 168, .08); }
+.challenge-card-index { font: 10px "DM Mono", monospace; color: #79968b; }
+.challenge-card .preset-tag { border-color: rgba(70, 108, 180, .4); color: #3f6392; }
+.challenge-card strong { font: 400 20px "Source Serif 4", serif; color: #17342a; }
+.challenge-card p { margin: 0; color: #5f746c; font-size: 12.5px; line-height: 1.7; flex: 1; }
+.challenge-card-status { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #527064; }
+.challenge-card.is-solved .challenge-card-status { color: #2e7d54; }
+
+/* 实验记录（深绿） */
+.challenge-log { background: #10251f; padding: 88px 4.6vw 100px; }
+.challenge-log .signal-heading h2 { color: #eff8f2; }
+.challenge-log-empty { color: #79998a; font-size: 13.5px; }
+.challenge-log-list { border-top: 1px solid rgba(219, 241, 229, .18); }
+.challenge-log-row { width: 100%; display: grid; grid-template-columns: 30px 56px 1fr 110px 130px 20px; align-items: center; gap: 14px; padding: 14px 8px; background: transparent; border-bottom: 1px solid rgba(219, 241, 229, .12); color: #e9f5ed; text-align: left; transition: background .2s; }
+.challenge-log-row:hover { background: rgba(192, 247, 213, .06); }
+.log-check { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(142, 224, 168, .16); color: #8ee0a8; }
+.log-level { font: 10px "DM Mono", monospace; color: #8fb8ef; letter-spacing: 1px; }
+.log-title { font-size: 14px; }
+.log-meta { font: 11px "DM Mono", monospace; color: #78958a; }
+.challenge-log-row > svg { color: #b9d8c6; }
+
+/* 作答区（浅色） */
+.challenge-answer { background: #e5eee9; color: #112520; }
+.challenge-answer .section-intro .eyebrow { color: #638075; }
+.challenge-answer .section-intro h2 { color: #112520; }
+.challenge-hint { display: flex; align-items: center; gap: 8px; color: #7d6224 !important; }
+.challenge-hint svg { flex: none; }
+.answer-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 36px; max-width: 760px; }
+.answer-option { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px solid #c0d1c8; border-radius: 4px; background: rgba(255, 255, 255, .45); color: #17342a; transition: border-color .2s, background .2s, transform .15s; }
+.answer-option:hover:not(:disabled) { border-color: #3f6392; transform: translateY(-2px); }
+.answer-option:disabled { cursor: default; }
+.option-letter { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border: 1px solid #9cb2a8; border-radius: 50%; font: 500 12px "DM Mono", monospace; color: #527064; }
+.answer-option strong { font: 500 16px "DM Mono", monospace; letter-spacing: .5px; }
+.answer-option > svg { margin-left: auto; flex: none; }
+.answer-option.is-selected { background: #17342a; border-color: #17342a; color: #eaf7ef; }
+.answer-option.is-selected .option-letter { border-color: #8fb8ef; color: #8fb8ef; }
+.answer-option.is-correct { background: #17342a; border-color: #2e7d54; color: #8ee0a8; box-shadow: 0 0 0 1px #2e7d54; }
+.answer-option.is-correct .option-letter { border-color: #2e7d54; color: #8ee0a8; }
+.answer-option.is-wrong { border-color: #be546e; background: rgba(239, 143, 176, .12); color: #a24458; }
+.answer-option.is-wrong .option-letter { border-color: #be546e; color: #be546e; }
+.answer-option.is-dim { opacity: .55; }
+.answer-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+.challenge-submit { display: inline-flex; align-items: center; gap: 9px; padding: 13px 26px; border: 1px solid #17342a; border-radius: 999px; background: #17342a; color: #eaf7ef; font-size: 13.5px; font-weight: 600; transition: background .2s, transform .15s; }
+.challenge-submit:hover:not(:disabled) { background: #254a3b; transform: translateY(-1px); }
+.challenge-submit:disabled { opacity: .4; cursor: not-allowed; }
+.challenge-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border: 1px solid #9cb2a8; border-radius: 999px; background: transparent; color: #33483f; font-size: 13px; transition: border-color .2s, background .2s; }
+.challenge-secondary:hover { border-color: #17342a; background: rgba(23, 52, 42, .06); }
+.verdict { display: flex; align-items: center; gap: 14px; max-width: 760px; margin-top: 26px; padding: 16px 20px; border-radius: 4px; }
+.verdict strong { display: block; font-size: 15px; margin-bottom: 3px; }
+.verdict span { font-size: 12.5px; }
+.verdict.is-correct { border: 1px solid rgba(46, 125, 84, .5); background: rgba(142, 224, 168, .14); color: #1f5c3d; }
+.verdict.is-wrong { border: 1px solid rgba(190, 84, 110, .45); background: rgba(239, 143, 176, .12); color: #8f3a50; }
+
+/* 解答展开区：推导（深）+ 概率（深绿） */
+.challenge-solution { background: #071314; }
+.challenge-solution .section-intro h2 { color: #eff8f2; }
+.solution-steps { margin: 38px 0 42px; }
+.challenge-solution .gamete-strip { margin: 0 0 26px; }
+.challenge-probability { background: #10251f; }
+.challenge-probability .section-intro h2 { color: #eff8f2; }
+
+/* 挑战模式横幅：蓝色调以区分 */
+.challenge-banner { border-top-color: rgba(143, 184, 239, .16); border-bottom-color: rgba(143, 184, 239, .16); }
+.challenge-banner .eyebrow { color: #8fb8ef; }
+.challenge-banner h2 { color: #e8eefa; }
+.challenge-banner .mendel-banner-cta { border-color: #8fb8ef; background: #8fb8ef; }
+.challenge-banner .mendel-banner-cta:hover { background: #aac9f6; }
+
 @media (max-width: 740px) {
   .site-header { padding: 0 20px; height: 62px; }.primary-nav { display: none; position: absolute; top: 62px; left: 0; right: 0; margin: 0; padding: 10px 20px 17px; background: #0c1d18; border-bottom: 1px solid rgba(220, 250, 232, .15); }.primary-nav.is-open { display: grid; }.primary-nav button { padding: 11px 0; text-align: left; }.mobile-only { display: grid; }
   .life-field { min-height: 780px; }.hero-copy { padding: 145px 20px 40px; }.hero-copy h1 { font-size: 46px; }.field-readout { left: 20px; right: auto; bottom: 69px; width: calc(100% - 40px); }.field-index { bottom: 24px; right: 20px; }.field-readout p { max-width: 290px; }
@@ -562,4 +658,16 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
   .stat-tile strong { font-size: 20px; }
   .caveat-grid { grid-template-columns: 1fr; }
   .codon-table-wrap { margin-left: -4px; }
+
+  .challenge-levels, .challenge-log { padding-left: 20px; padding-right: 20px; }
+  .challenge-level-head h2 { font-size: 24px; }
+  .level-progress { margin-left: 0; flex-basis: 100%; order: 3; }
+  .challenge-level-head p { order: 4; }
+  .challenge-grid { grid-template-columns: 1fr; }
+  .challenge-card { min-height: 0; }
+  .challenge-log-row { grid-template-columns: 26px 1fr 18px; }
+  .log-level, .log-meta { display: none; }
+  .answer-options { grid-template-columns: 1fr; }
+  .answer-actions { align-items: stretch; flex-direction: column; }
+  .challenge-submit, .challenge-secondary { justify-content: center; }
 }

@@ -138,6 +138,37 @@ app.post("/api/interactions", (request, response) => {
   return response.status(201).json({ recorded: true });
 });
 
+app.post("/api/challenges/attempts", (request, response) => {
+  const { sessionId, questionId, level, correct, selected } = request.body ?? {};
+  if (![sessionId, questionId, selected].every((value) => typeof value === "string")) {
+    return response.status(400).json({ message: "Incomplete challenge attempt payload" });
+  }
+
+  db.prepare(`
+    INSERT INTO challenge_attempts (session_id, question_id, level, correct, selected)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(sessionId, questionId, Number(level) || 0, correct ? 1 : 0, selected);
+
+  return response.status(201).json({ recorded: true });
+});
+
+app.get("/api/challenges/progress", (request, response) => {
+  const sessionId = typeof request.query.sessionId === "string" ? request.query.sessionId : "";
+  if (!sessionId) return response.json([]);
+
+  const rows = db.prepare(`
+    SELECT question_id AS questionId,
+           COUNT(*) AS attempts,
+           MAX(correct) AS solved,
+           MAX(created_at) AS lastAt
+    FROM challenge_attempts
+    WHERE session_id = ?
+    GROUP BY question_id
+  `).all(sessionId);
+
+  return response.json(rows);
+});
+
 app.listen(port, () => {
   console.log(`BioLab API is running at http://localhost:${port}`);
 });
