@@ -444,23 +444,6 @@ export function Insights({
                   emptyHint="时间范围内没有数据点"
                 />
               )}
-              {/* 数据表：保证图表读数可核对，不做纯视觉装饰 */}
-              {(chart === "bar" || chart === "line") && (
-                <ChartTable
-                  headers={[dimDef.label, measureDef.label, "记录数", "占比", "主要数据域"]}
-                  rows={buckets.map((bucket) => {
-                    const total = buckets.reduce((sum, item) => sum + item.count, 0);
-                    const top = [...bucket.byCategory].sort((a, b) => b.count - a.count).slice(0, 3);
-                    return [
-                      bucket.label,
-                      `${Number.isInteger(bucket.measure) ? bucket.measure : bucket.measure.toFixed(2)} ${measureDef.unit}`,
-                      `${bucket.count} 条`,
-                      `${total ? ((bucket.count / total) * 100).toFixed(1) : 0}%`,
-                      top.map((part) => `${part.name} ${part.count}`).join("、")
-                    ];
-                  })}
-                />
-              )}
               {chart === "scatter" && (
                 <ChartTable
                   headers={["记录", "数据域", "数据类型", "指标数", "主题数", "更新时间"]}

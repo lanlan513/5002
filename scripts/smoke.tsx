@@ -162,6 +162,7 @@ check("可视化标题出现", body.includes("数据可视化中心"));
 check("四种图表切换按钮齐全",
   ["柱状图", "折线图", "散点图", "网络图"].every((label) => body.includes(label)));
 check("默认渲染柱状图（存在数值明细表）", exists(".chart-table") && body.includes("数值明细"));
+check("柱状/折线只渲染一张数值明细表", rootEl.querySelectorAll(".chart-table-wrap").length === 1);
 check("摘要统计包含全部 37 条记录", body.includes("纳入分析的记录") && rootEl.querySelectorAll(".summary-stat").length === 5);
 check("柱状图为 SVG 绘制", !!rootEl.querySelector(".chart-panel svg rect"));
 check("柱上标注数值", !!rootEl.querySelector(".chart-value-inline"));
@@ -173,6 +174,7 @@ await act(async () => {
 await settle(300);
 check("URL 反映 chart=line", window.location.hash.includes("chart=line"));
 check("折线图渲染出折线 path", rootEl.querySelectorAll(".chart-panel svg path").length >= 2);
+check("折线图也只渲染一张数值明细表", rootEl.querySelectorAll(".chart-table-wrap").length === 1);
 check("折线默认按月份分组", text().includes("更新月份"));
 
 // 折线图改度量为平均指标数
