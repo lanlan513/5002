@@ -1,8 +1,11 @@
 import type {
   BodySystemSeed,
   CellSeed,
+  CouplingPathwaySeed,
   KnowledgeSeed,
+  OrganRelationSeed,
   OrganSeed,
+  SubstanceKind,
   TissueSeed,
   TopicSeed
 } from "./types.js";
@@ -1136,5 +1139,156 @@ export const cells: CellSeed[] = [
     tissueSlug: "pancreatic-islets",
     function: "血糖偏低时分泌胰高血糖素，动员肝糖原。",
     fact: "胰岛素与胰高血糖素作用相反、共同稳糖。"
+  }
+];
+
+// ===== 器官关系网络：物质在器官之间的有向流动 =====
+
+export interface SubstanceSeed {
+  slug: SubstanceKind;
+  name: string;
+  color: string;
+  description: string;
+}
+
+export const substances: SubstanceSeed[] = [
+  { slug: "oxygen", name: "氧气", color: "#7cc8ff", description: "由肺泡进入血液，被心脏泵往全身组织。" },
+  { slug: "co2", name: "二氧化碳", color: "#e08a6e", description: "细胞代谢的产物，随血液回流到肺被呼出。" },
+  { slug: "nutrient", name: "营养物质", color: "#f2cd5e", description: "消化产生的糖、氨基酸与脂肪，吸收后供能或储存。" },
+  { slug: "waste", name: "代谢废物", color: "#b58ce0", description: "尿素等废物由血液送到肾脏过滤，最终进入尿液。" },
+  { slug: "hormone", name: "激素", color: "#f093d4", description: "腺体分泌的化学信使，经血流作用于远处器官。" },
+  { slug: "signal", name: "神经信号", color: "#8fe0c9", description: "以电脉冲在神经纤维上传播，毫秒级协调各器官。" },
+  { slug: "water", name: "水与电解质", color: "#6fe0e8", description: "在肠、肾与血液之间被吸收、回收与精细调配。" },
+  { slug: "bile", name: "胆汁", color: "#9fc46a", description: "肝脏分泌后进入小肠，乳化脂肪帮助吸收。" }
+];
+
+export const organRelations: OrganRelationSeed[] = [
+  // —— 呼吸 × 循环：气体交换 ——
+  { from: "trachea", to: "lungs", substances: ["oxygen"], label: "空气经气管抵达肺泡" },
+  { from: "lungs", to: "trachea", substances: ["co2"], label: "二氧化碳沿气道被呼出" },
+  { from: "lungs", to: "blood-vessels", substances: ["oxygen"], label: "肺泡向血液充氧" },
+  { from: "blood-vessels", to: "lungs", substances: ["co2"], label: "血液送来二氧化碳等待排出" },
+  { from: "heart", to: "blood-vessels", substances: ["oxygen", "nutrient"], label: "心脏把含氧与营养的动脉血压向全身" },
+  { from: "blood-vessels", to: "heart", substances: ["co2", "waste"], label: "静脉血携废物回心，再被送往肺与肾" },
+
+  // —— 循环 × 神经 ——
+  { from: "blood-vessels", to: "brain", substances: ["oxygen", "nutrient"], label: "脑以约 2% 的体重消耗约 20% 的氧与能量" },
+  { from: "brain", to: "blood-vessels", substances: ["co2", "waste"], label: "脑细胞代谢产物进入循环被带走" },
+
+  // —— 循环 × 消化 ——
+  { from: "blood-vessels", to: "stomach", substances: ["oxygen"], label: "动脉血为胃壁肌肉与腺体供氧" },
+  { from: "stomach", to: "blood-vessels", substances: ["co2"], label: "胃壁产生的二氧化碳进入血液" },
+  { from: "blood-vessels", to: "small-intestine", substances: ["oxygen"], label: "氧供维持绒毛上皮的吸收工作" },
+  { from: "small-intestine", to: "blood-vessels", substances: ["nutrient", "water", "co2"], label: "吸收的糖、氨基酸、水进入血液" },
+  { from: "blood-vessels", to: "large-intestine", substances: ["oxygen"], label: "氧供支持结肠壁与菌群环境" },
+  { from: "large-intestine", to: "blood-vessels", substances: ["water", "co2"], label: "每天约 1 升回收水重新进入血液" },
+  { from: "blood-vessels", to: "liver", substances: ["oxygen"], label: "肝动脉为肝脏输送氧气" },
+  { from: "small-intestine", to: "liver", substances: ["nutrient"], label: "门静脉把吸收的营养直接送入肝脏加工" },
+  { from: "liver", to: "blood-vessels", substances: ["nutrient", "co2", "waste"], label: "加工后的营养入血，废物等待肾脏处理" },
+  { from: "liver", to: "small-intestine", substances: ["bile"], label: "胆汁流入十二指肠乳化脂肪" },
+  { from: "stomach", to: "small-intestine", substances: ["nutrient", "water"], label: "酸性食糜被分批排入十二指肠" },
+  { from: "small-intestine", to: "large-intestine", substances: ["water", "waste"], label: "未吸收残渣与水分进入结肠" },
+
+  // —— 循环 × 泌尿 ——
+  { from: "blood-vessels", to: "kidneys", substances: ["waste", "water", "hormone"], label: "血液送来待过滤的废物；抗利尿激素随血抵达" },
+  { from: "kidneys", to: "blood-vessels", substances: ["water", "hormone"], label: "回收水盐，并分泌促红细胞生成素" },
+  { from: "kidneys", to: "bladder", substances: ["waste", "water"], label: "尿液经输尿管进入膀胱储存" },
+
+  // —— 内分泌 × 循环 ——
+  { from: "blood-vessels", to: "pancreas-gland", substances: ["oxygen", "nutrient"], label: "血糖浓度变化随血到达胰岛被感知" },
+  { from: "pancreas-gland", to: "blood-vessels", substances: ["hormone"], label: "胰岛素与胰高血糖素直接分泌入血" },
+  { from: "blood-vessels", to: "thyroid", substances: ["oxygen", "hormone"], label: "促甲状腺激素经血液指挥甲状腺" },
+  { from: "thyroid", to: "blood-vessels", substances: ["hormone"], label: "甲状腺激素入血，设定全身代谢节奏" },
+  { from: "pituitary", to: "blood-vessels", substances: ["hormone"], label: "垂体促激素进入循环，指挥远距腺体" },
+
+  // —— 神经系统内部及其全身支配 ——
+  { from: "brain", to: "spinal-cord", substances: ["signal"], label: "下行运动与调节指令" },
+  { from: "spinal-cord", to: "brain", substances: ["signal"], label: "上行感觉信息" },
+  { from: "spinal-cord", to: "peripheral-nerves", substances: ["signal"], label: "指令沿周围神经电缆传出" },
+  { from: "peripheral-nerves", to: "spinal-cord", substances: ["signal"], label: "皮肤与内脏的感觉信号回传" },
+  { from: "peripheral-nerves", to: "heart", substances: ["signal"], label: "自主神经加快或减慢心率" },
+  { from: "peripheral-nerves", to: "lungs", substances: ["signal"], label: "自主神经调节支气管与通气节奏" },
+  { from: "peripheral-nerves", to: "stomach", substances: ["signal"], label: "调节胃液分泌与胃蠕动" },
+  { from: "peripheral-nerves", to: "small-intestine", substances: ["signal"], label: "肠神经协调蠕动与分节运动" },
+  { from: "peripheral-nerves", to: "blood-vessels", substances: ["signal"], label: "调节血管张力，重新分配全身血流" },
+  { from: "brain", to: "pituitary", substances: ["signal"], label: "下丘脑经神经与垂体门脉指挥垂体" }
+];
+
+export const couplingPathways: CouplingPathwaySeed[] = [
+  {
+    slug: "oxygen-journey",
+    name: "氧气之旅",
+    story: "空气经气管进入肺泡，氧扩散进血液，由心脏加压后输送到脑这样最耗氧的器官——呼吸与循环在此耦合。",
+    edges: [
+      { from: "trachea", to: "lungs" },
+      { from: "lungs", to: "blood-vessels" },
+      { from: "heart", to: "blood-vessels" },
+      { from: "blood-vessels", to: "brain" }
+    ]
+  },
+  {
+    slug: "co2-return",
+    name: "二氧化碳归程",
+    story: "脑细胞产生的二氧化碳进入静脉血回流心脏，再被泵向肺部，沿气管呼出——去程是氧，回程是碳。",
+    edges: [
+      { from: "brain", to: "blood-vessels" },
+      { from: "blood-vessels", to: "heart" },
+      { from: "heart", to: "blood-vessels" },
+      { from: "blood-vessels", to: "lungs" },
+      { from: "lungs", to: "trachea" }
+    ]
+  },
+  {
+    slug: "nutrient-journey",
+    name: "营养的加工与分发",
+    story: "肝脏分泌胆汁乳化脂肪，小肠吸收营养后先经门静脉送入肝脏加工，再进入循环运往全身——消化、肝与循环接力。",
+    edges: [
+      { from: "liver", to: "small-intestine" },
+      { from: "stomach", to: "small-intestine" },
+      { from: "small-intestine", to: "liver" },
+      { from: "liver", to: "blood-vessels" },
+      { from: "blood-vessels", to: "brain" }
+    ]
+  },
+  {
+    slug: "urine-path",
+    name: "废物与尿液",
+    story: "肾脏每分钟接收大量血液，把尿素、多余的水滤出，回收需要的成分，尿液经输尿管储入膀胱——循环与泌尿耦合。",
+    edges: [
+      { from: "blood-vessels", to: "kidneys" },
+      { from: "kidneys", to: "blood-vessels" },
+      { from: "kidneys", to: "bladder" }
+    ]
+  },
+  {
+    slug: "glucose-feedback",
+    name: "血糖负反馈",
+    story: "血糖随血流到达胰岛被感知，β 细胞分泌胰岛素入血，命令肝脏等器官摄取与储存葡萄糖，血糖随即回落。",
+    edges: [
+      { from: "blood-vessels", to: "pancreas-gland" },
+      { from: "pancreas-gland", to: "blood-vessels" },
+      { from: "blood-vessels", to: "liver" }
+    ]
+  },
+  {
+    slug: "neural-control",
+    name: "神经实时调控",
+    story: "脑的决定经脊髓、周围神经直达心脏——一次心跳的快慢，在毫秒间被神经系统调整。",
+    edges: [
+      { from: "brain", to: "spinal-cord" },
+      { from: "spinal-cord", to: "peripheral-nerves" },
+      { from: "peripheral-nerves", to: "heart" }
+    ]
+  },
+  {
+    slug: "water-balance",
+    name: "水盐稳态（ADH）",
+    story: "下丘脑指挥垂体释放抗利尿激素，激素经血液到达肾脏，改变集合管对水的重吸收——神经、内分泌与泌尿协同。",
+    edges: [
+      { from: "brain", to: "pituitary" },
+      { from: "pituitary", to: "blood-vessels" },
+      { from: "blood-vessels", to: "kidneys" },
+      { from: "kidneys", to: "blood-vessels" }
+    ]
   }
 ];

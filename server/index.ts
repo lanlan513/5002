@@ -1,6 +1,7 @@
 import cors from "cors";
 import express, { type Response } from "express";
-import db from "./db.js";
+import db, { couplingPathways, substances } from "./db.js";
+import { organs } from "./seed.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 8795);
@@ -105,6 +106,54 @@ app.get("/api/body/overview", (_request, response) => {
       organs: organsBySystem.get(system.slug as string) ?? []
     }))
   });
+});
+
+// 器官关系网络：物质如何在器官之间定向流动
+app.get("/api/body/relations", (_request, response) => {
+  const organRows = db
+    .prepare("SELECT slug, name, system_slug, hotspot FROM organs")
+    .all()
+    .map((row) => parseJsonFields(row as JsonRow, ["hotspot"])) as {
+    slug: string;
+    name: string;
+    system_slug: string;
+    hotspot: { x: number; y: number; r: number };
+  }[];
+
+  const relationRows = db
+    .prepare("SELECT from_organ, to_organ, substances, label FROM organ_relations")
+    .all()
+    .map((row) => parseJsonFields(row as JsonRow, ["substances"])) as {
+    from_organ: string;
+    to_organ: string;
+    substances: string[];
+    label: string;
+  }[];
+
+  // 以种子里的器官清单为准（包含未入库的热点坐标），避免旧库缺字段时关系悬空
+  const knownSlugs = new Set(organs.map((organ) => organ.slug));
+  const hotspotBySlug = new Map(organRows.map((organ) => [organ.slug, organ.hotspot]));
+  const fallbackHotspot = new Map(organs.map((organ) => [organ.slug, organ.hotspot]));
+
+  const nodes = organs.map((organ) => ({
+    slug: organ.slug,
+    name: organ.name,
+    system_slug: organ.systemSlug,
+    hotspot: hotspotBySlug.get(organ.slug) ?? fallbackHotspot.get(organ.slug)
+  }));
+
+  const edges = relationRows
+    .filter(
+      (relation) => knownSlugs.has(relation.from_organ) && knownSlugs.has(relation.to_organ)
+    )
+    .map((relation) => ({
+      from: relation.from_organ,
+      to: relation.to_organ,
+      substances: relation.substances,
+      label: relation.label
+    }));
+
+  response.json({ substances, edges, pathways: couplingPathways, nodes });
 });
 
 app.get("/api/body/systems/:slug", (request, response) => {

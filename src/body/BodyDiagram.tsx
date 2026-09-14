@@ -1,5 +1,12 @@
 import { useMemo, useState } from "react";
-import type { BodyOrganBrief, Hotspot } from "../api";
+import type {
+  BodyOrganBrief,
+  CouplingPathway,
+  Hotspot,
+  OrganNetwork,
+  Substance
+} from "../api";
+import { buildEdgeGeometries, edgeKey, edgesForOrgan, type EdgeGeometry } from "./organNetwork";
 
 type SystemColorMap = Record<string, string>;
 
@@ -11,6 +18,11 @@ interface BodyDiagramProps {
   highlightedOrgan?: string | null;
   onSelect: (organ: BodyOrganBrief) => void;
   compact?: boolean;
+  network?: OrganNetwork | null;
+  showNetwork?: boolean;
+  focusOrgan?: string | null;
+  pathway?: CouplingPathway | null;
+  pathwayStep?: number;
 }
 
 // 正面人体轮廓（viewBox 240 × 560），与服务端下发的 hotspot 坐标共用同一坐标系
@@ -55,6 +67,43 @@ const BODY_PATH = `
   Z
 `;
 
+// 环境态：慢速、暗淡，只提示“网络一直存在”
+const ambientDuration = (geo: EdgeGeometry) => Math.min(4.4, 1.9 + (geo.length / 420) * 2.4);
+// 高亮态：更快、更亮，清楚指示方向
+const activeDuration = (geo: EdgeGeometry) => Math.min(2.6, 1.05 + (geo.length / 520) * 1.5);
+
+function FlowParticle({
+  path,
+  color,
+  dur,
+  index,
+  r,
+  opacity,
+  boost = 1
+}: {
+  path: string;
+  color: string;
+  dur: number;
+  index: number;
+  r: number;
+  opacity: number;
+  boost?: number;
+}) {
+  return (
+    <circle className="flow-particle" r={r} fill={color} opacity={opacity}>
+      <animateMotion dur={`${dur}s`} begin={`${-((index * 0.53) % dur)}s`} repeatCount="indefinite" path={path} />
+      {boost > 1 && (
+        <animate
+          attributeName="r"
+          values={`${r};${r * 1.5};${r}`}
+          dur={`${dur}s`}
+          repeatCount="indefinite"
+        />
+      )}
+    </circle>
+  );
+}
+
 export function BodyDiagram({
   organs,
   systemColors,
@@ -62,9 +111,19 @@ export function BodyDiagram({
   selectedOrgan,
   highlightedOrgan,
   onSelect,
-  compact
+  compact,
+  network,
+  showNetwork = true,
+  focusOrgan = null,
+  pathway = null,
+  pathwayStep = 0
 }: BodyDiagramProps) {
   const [hovered, setHovered] = useState<BodyOrganBrief | null>(null);
+
+  const reduceMotion = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
 
   // 大热点先渲染，保证小热点在上层、始终可点击
   const sorted = useMemo(
@@ -72,17 +131,62 @@ export function BodyDiagram({
     [organs]
   );
 
-  const isDimmed = (organ: BodyOrganBrief) =>
-    activeSystem !== null && organ.system_slug !== activeSystem;
+  const geometries = useMemo(
+    () => (network ? buildEdgeGeometries(network.edges, network.nodes) : []),
+    [network]
+  );
+
+  const substanceColor = useMemo(() => {
+    const map = new Map<string, Substance>();
+    network?.substances.forEach((item) => map.set(item.slug, item));
+    return (slug: string) => map.get(slug)?.color ?? "#9fe8c5";
+  }, [network]);
+
+  // 悬停时也能预览该器官的直接关系；路径播放时以路径为准
+  const effectiveFocus = pathway ? null : (focusOrgan ?? hovered?.slug ?? null);
+
+  const { activeKeySet, pulseKey, relatedNodes } = useMemo(() => {
+    const active = new Set<string>();
+    const related = new Set<string>();
+    let pulse: string | null = null;
+    if (showNetwork && network) {
+      if (pathway) {
+        pathway.edges.forEach((edge) => {
+          active.add(edgeKey(edge.from, edge.to));
+          related.add(edge.from);
+          related.add(edge.to);
+        });
+        const stepEdge = pathway.edges[pathwayStep];
+        if (stepEdge) pulse = edgeKey(stepEdge.from, stepEdge.to);
+      } else if (effectiveFocus) {
+        edgesForOrgan(network.edges, effectiveFocus).forEach((edge) => {
+          active.add(edgeKey(edge.from, edge.to));
+          related.add(edge.from);
+          related.add(edge.to);
+        });
+      }
+    }
+    return { activeKeySet: active, pulseKey: pulse, relatedNodes: related };
+  }, [showNetwork, network, pathway, pathwayStep, effectiveFocus]);
+
+  const networkActive = activeKeySet.size > 0;
+
+  const isDimmed = (organ: BodyOrganBrief) => {
+    if (activeSystem !== null && organ.system_slug !== activeSystem) return true;
+    if (networkActive && !relatedNodes.has(organ.slug)) return true;
+    return false;
+  };
 
   const tooltipOrgan = hovered;
   const tooltip: (Hotspot & { label: string; color: string }) | null = tooltipOrgan
     ? { ...tooltipOrgan.hotspot, label: tooltipOrgan.name, color: systemColors[tooltipOrgan.system_slug] ?? "#9fe8c5" }
     : null;
 
+  let particleIndex = 0;
+
   return (
     <div className={`body-diagram${compact ? " is-compact" : ""}`}>
-      <svg viewBox="0 0 240 560" role="group" aria-label="可点击的人体示意图">
+      <svg viewBox="0 0 240 560" role="group" aria-label="可点击的人体示意图与器官关系网络">
         <defs>
           <radialGradient id="bodyFill" cx="50%" cy="42%" r="72%">
             <stop offset="0%" stopColor="#16382f" />
@@ -96,6 +200,20 @@ export function BodyDiagram({
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          {network?.substances.map((substance) => (
+            <marker
+              key={substance.slug}
+              id={`flow-arrow-${substance.slug}`}
+              viewBox="0 0 10 10"
+              refX="8"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={substance.color} />
+            </marker>
+          ))}
         </defs>
 
         {/* 头与躯干轮廓 */}
@@ -108,17 +226,110 @@ export function BodyDiagram({
           <line x1="120" y1="18" x2="120" y2="476" />
         </g>
 
+        {/* ===== 器官关系网络：物质流动叠加层 ===== */}
+        {showNetwork && network && (
+          <g className="network-layer" aria-hidden="true">
+            {/* 环境态：全部关系以极淡线条存在，提示系统彼此相连 */}
+            {!networkActive &&
+              geometries.map((geo) =>
+                geo.lanes.map((lane) => (
+                  <path
+                    key={`ambient-${geo.key}-${lane.substance}`}
+                    className="network-lane is-ambient"
+                    d={lane.path}
+                    stroke={substanceColor(lane.substance)}
+                  />
+                ))
+              )}
+
+            {/* 高亮态：未激活的关系仍保留淡淡底色 */}
+            {networkActive &&
+              geometries.map((geo) =>
+                geo.lanes.map((lane) => (
+                  <path
+                    key={`dim-${geo.key}-${lane.substance}`}
+                    className="network-lane is-dim"
+                    d={lane.path}
+                    stroke={substanceColor(lane.substance)}
+                  />
+                ))
+              )}
+
+            {/* 激活关系：带方向箭头的物质 lane */}
+            {geometries
+              .filter((geo) => activeKeySet.has(geo.key))
+              .map((geo) => {
+                const isPulse = geo.key === pulseKey;
+                return (
+                  <g key={`active-${geo.key}`} className="network-edge-active">
+                    {isPulse && (
+                      <path className="network-lane is-pulse-halo" d={geo.basePath} stroke="#eafcf0" />
+                    )}
+                    {geo.lanes.map((lane) => (
+                      <path
+                        key={lane.substance}
+                        className={`network-lane is-active${isPulse ? " is-pulse" : ""}`}
+                        d={lane.path}
+                        stroke={substanceColor(lane.substance)}
+                        markerEnd={`url(#flow-arrow-${lane.substance})`}
+                      />
+                    ))}
+                  </g>
+                );
+              })}
+
+            {/* 环境态粒子：每条关系取第一种物质，缓慢流动 */}
+            {!reduceMotion &&
+              !networkActive &&
+              geometries.map((geo, index) => (
+                <FlowParticle
+                  key={`ambient-particle-${geo.key}`}
+                  path={geo.lanes[0].path}
+                  color={substanceColor(geo.lanes[0].substance)}
+                  dur={ambientDuration(geo)}
+                  index={index + particleIndex}
+                  r={1.3}
+                  opacity={0.3}
+                />
+              ))}
+
+            {/* 激活态粒子：每种物质一路粒子，方向即运输方向 */}
+            {!reduceMotion &&
+              geometries
+                .filter((geo) => activeKeySet.has(geo.key))
+                .map((geo) => {
+                  const isPulse = geo.key === pulseKey;
+                  return geo.lanes.map((lane, laneIndex) => (
+                    <FlowParticle
+                      key={`active-particle-${geo.key}-${lane.substance}`}
+                      path={lane.path}
+                      color={substanceColor(lane.substance)}
+                      dur={activeDuration(geo) / (isPulse ? 1.15 : 1)}
+                      index={particleIndex++ + laneIndex * 2}
+                      r={isPulse ? 2.3 : 1.9}
+                      opacity={isPulse ? 1 : 0.92}
+                      boost={isPulse ? 2 : 1}
+                    />
+                  ));
+                })}
+          </g>
+        )}
+
         {sorted.map((organ) => {
           const color = systemColors[organ.system_slug] ?? "#9fe8c5";
           const dimmed = isDimmed(organ);
+          const related = networkActive && relatedNodes.has(organ.slug);
           const active =
             selectedOrgan === organ.slug ||
             highlightedOrgan === organ.slug ||
-            hovered?.slug === organ.slug;
+            hovered?.slug === organ.slug ||
+            related;
           return (
             <g
               key={organ.slug}
-              className={`diagram-hotspot${active ? " is-active" : ""}${dimmed ? " is-dimmed" : ""}`}
+              className={`diagram-hotspot${active ? " is-active" : ""}${dimmed ? " is-dimmed" : ""}${
+                related && selectedOrgan !== organ.slug ? " is-related" : ""
+              }`}
               transform={`translate(${organ.hotspot.x} ${organ.hotspot.y})`}
               onMouseEnter={() => setHovered(organ)}
               onMouseLeave={() => setHovered(null)}
@@ -163,7 +374,11 @@ export function BodyDiagram({
             );
           })()}
       </svg>
-      <p className="diagram-hint">点击身体上的彩色标记，按空间位置进入器官</p>
+      <p className="diagram-hint">
+        {showNetwork && network
+          ? "彩色粒子表示流动中的物质 · 点击器官高亮与它直接相连的器官"
+          : "点击身体上的彩色标记，按空间位置进入器官"}
+      </p>
     </div>
   );
 }

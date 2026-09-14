@@ -1,5 +1,15 @@
 import Database from "better-sqlite3";
-import { bodySystems, cells, knowledge, organs, tissues, topics } from "./seed.js";
+import {
+  bodySystems,
+  cells,
+  couplingPathways,
+  knowledge,
+  organRelations,
+  organs,
+  substances,
+  tissues,
+  topics
+} from "./seed.js";
 
 const db = new Database("biolab.db");
 db.pragma("journal_mode = WAL");
@@ -94,6 +104,15 @@ db.exec(`
     entity_slug TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS organ_relations (
+    id INTEGER PRIMARY KEY,
+    from_organ TEXT NOT NULL REFERENCES organs(slug),
+    to_organ TEXT NOT NULL REFERENCES organs(slug),
+    substances TEXT NOT NULL,
+    label TEXT NOT NULL,
+    UNIQUE (from_organ, to_organ)
+  );
 `);
 
 const knowledgeColumns = db.prepare("PRAGMA table_info(knowledge)").all() as { name: string }[];
@@ -160,5 +179,24 @@ if (hasTopics.count === 0) {
     );
   })();
 }
+
+// 器官关系网络（独立补齐，旧数据库也能获得新数据）
+const hasRelations = db.prepare("SELECT COUNT(*) AS count FROM organ_relations").get() as {
+  count: number;
+};
+if (hasRelations.count === 0) {
+  const insertRelation = db.prepare(`
+    INSERT INTO organ_relations (from_organ, to_organ, substances, label)
+    VALUES (@from, @to, @substances, @label)
+  `);
+  db.transaction(() => {
+    organRelations.forEach((relation) =>
+      insertRelation.run({ ...relation, substances: JSON.stringify(relation.substances) })
+    );
+  })();
+}
+
+// 路径与物质元数据为纯种子常量，直接随模块导出使用（见 /api/body/relations）
+export { substances, couplingPathways };
 
 export default db;

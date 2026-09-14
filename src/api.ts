@@ -115,6 +115,53 @@ export type SystemDetail = BodySystem & {
   knowledge: Knowledge[];
 };
 
+// ===== 器官关系网络 =====
+
+export type SubstanceKind =
+  | "oxygen"
+  | "co2"
+  | "nutrient"
+  | "waste"
+  | "hormone"
+  | "signal"
+  | "water"
+  | "bile";
+
+export type Substance = {
+  slug: SubstanceKind;
+  name: string;
+  color: string;
+  description: string;
+};
+
+export type OrganRelationEdge = {
+  from: string;
+  to: string;
+  substances: SubstanceKind[];
+  label: string;
+};
+
+export type RelationNode = {
+  slug: string;
+  name: string;
+  system_slug: string;
+  hotspot: Hotspot;
+};
+
+export type CouplingPathway = {
+  slug: string;
+  name: string;
+  story: string;
+  edges: { from: string; to: string }[];
+};
+
+export type OrganNetwork = {
+  substances: Substance[];
+  edges: OrganRelationEdge[];
+  pathways: CouplingPathway[];
+  nodes: RelationNode[];
+};
+
 const getJson = async <T>(path: string): Promise<T> => {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
@@ -131,6 +178,7 @@ export const api = {
   entry: (slug: string) => getJson<Knowledge>(`/api/knowledge/${slug}`),
 
   bodyOverview: () => getJson<BodyOverview>("/api/body/overview"),
+  bodyRelations: () => getJson<OrganNetwork>("/api/body/relations"),
   bodySystem: (slug: string) => getJson<SystemDetail>(`/api/body/systems/${slug}`),
   bodyOrgan: (slug: string) => getJson<BodyOrgan>(`/api/body/organs/${slug}`),
   bodyTissue: (slug: string) => getJson<BodyTissue>(`/api/body/tissues/${slug}`),

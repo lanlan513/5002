@@ -78,3 +78,30 @@ export interface CellSeed {
   function: string;
   fact: string;
 }
+
+/** 器官之间输送的物质类别 */
+export type SubstanceKind =
+  | "oxygen"
+  | "co2"
+  | "nutrient"
+  | "waste"
+  | "hormone"
+  | "signal"
+  | "water"
+  | "bile";
+
+/** 一条有向关系：from → to，携带一种或多种物质 */
+export interface OrganRelationSeed {
+  from: string;
+  to: string;
+  substances: SubstanceKind[];
+  label: string;
+}
+
+/** 跨系统协作路径：由若干条关系串联成的“物质之旅” */
+export interface CouplingPathwaySeed {
+  slug: string;
+  name: string;
+  story: string;
+  edges: { from: string; to: string }[];
+}

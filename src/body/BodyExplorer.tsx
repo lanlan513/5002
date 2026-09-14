@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, ChevronRight, Layers, MousePointerClick } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronRight, Layers, MousePointerClick, Network, Pause, Play, Waves } from "lucide-react";
 import {
   api,
   type BodyCell,
@@ -7,9 +7,13 @@ import {
   type BodyOrganBrief,
   type BodyOverview,
   type BodyTissue,
+  type OrganNetwork,
+  type OrganRelationEdge,
+  type Substance,
   type SystemDetail
 } from "../api";
 import { BodyDiagram } from "./BodyDiagram";
+import { edgeKey } from "./organNetwork";
 
 export type BodyRoute =
   | { level: "body" }
@@ -38,15 +42,51 @@ export function BodyExplorer({ route, onNavigate }: BodyExplorerProps) {
   const [tissue, setTissue] = useState<BodyTissue | null>(null);
   const [cell, setCell] = useState<BodyCell | null>(null);
   const [activeSystem, setActiveSystem] = useState<string | null>(null);
+  const [network, setNetwork] = useState<OrganNetwork | null>(null);
+  const [showNetwork, setShowNetwork] = useState(true);
+  const [activePathwaySlug, setActivePathwaySlug] = useState<string | null>(null);
+  const [pathwayStep, setPathwayStep] = useState(0);
+  const [pathwayPlaying, setPathwayPlaying] = useState(true);
 
   useEffect(() => {
     api.bodyOverview().then(setOverview).catch(console.error);
+    api.bodyRelations().then(setNetwork).catch(console.error);
   }, []);
 
   // 深链接进入时同步系统筛选
   useEffect(() => {
     if (route.level === "system") setActiveSystem(route.slug);
   }, [route]);
+
+  // 协作路径只在人体总览层播放
+  useEffect(() => {
+    if (route.level !== "body") setActivePathwaySlug(null);
+  }, [route.level]);
+
+  const activePathway = useMemo(
+    () => network?.pathways.find((item) => item.slug === activePathwaySlug) ?? null,
+    [network, activePathwaySlug]
+  );
+
+  // 路径自动推进：每隔约 2.3 秒高亮下一段物质流动
+  useEffect(() => {
+    if (!activePathway || !pathwayPlaying) return;
+    setPathwayStep(0);
+    const timer = window.setInterval(() => {
+      setPathwayStep((step) => (step + 1) % activePathway.edges.length);
+    }, 2300);
+    return () => window.clearInterval(timer);
+  }, [activePathway, pathwayPlaying]);
+
+  const selectPathway = (slug: string) => {
+    if (slug === activePathwaySlug) {
+      setActivePathwaySlug(null);
+    } else {
+      setActivePathwaySlug(slug);
+      setPathwayStep(0);
+      setPathwayPlaying(true);
+    }
+  };
 
   useEffect(() => {
     if (route.level !== "system") {
@@ -202,7 +242,21 @@ export function BodyExplorer({ route, onNavigate }: BodyExplorerProps) {
             selectedOrgan={route.level === "organ" ? route.slug : null}
             highlightedOrgan={route.level === "tissue" ? tissue?.organ_slug : route.level === "cell" ? cell?.organ_slug : null}
             onSelect={(organItem) => goOrgan(organItem.slug)}
+            network={network}
+            showNetwork={showNetwork}
+            focusOrgan={route.level === "organ" ? route.slug : null}
+            pathway={activePathway}
+            pathwayStep={pathwayStep}
           />
+          <div className="body-network-toggle">
+            <button
+              className={showNetwork ? "is-active" : ""}
+              onClick={() => setShowNetwork((value) => !value)}
+              title="在人体图上叠加器官之间的物质交换网络"
+            >
+              <Network size={13} /> {showNetwork ? "关系网络已开启" : "开启关系网络"}
+            </button>
+          </div>
           <div className="body-system-filter" role="tablist" aria-label="按系统筛选">
             <button
               className={activeSystem === null ? "is-active" : ""}
@@ -237,6 +291,12 @@ export function BodyExplorer({ route, onNavigate }: BodyExplorerProps) {
               activeSystem={activeSystem}
               visibleOrgans={visibleOrgans}
               systemColors={systemColors}
+              network={network}
+              activePathway={activePathway}
+              pathwayStep={pathwayStep}
+              pathwayPlaying={pathwayPlaying}
+              onTogglePlay={() => setPathwayPlaying((value) => !value)}
+              onSelectPathway={selectPathway}
               onSelectSystem={(slug) => {
                 setActiveSystem(slug);
                 onNavigate(`body/system/${slug}`);
@@ -258,7 +318,13 @@ export function BodyExplorer({ route, onNavigate }: BodyExplorerProps) {
 
           {route.level === "organ" &&
             (organ ? (
-              <OrganPanel organ={organ} onNavigate={onNavigate} />
+              <OrganPanel
+                organ={organ}
+                network={network}
+                systemColors={systemColors}
+                onOpenOrgan={goOrgan}
+                onNavigate={onNavigate}
+              />
             ) : (
               <PanelLoading />
             ))}
@@ -292,6 +358,12 @@ function BodyOverviewPanel({
   activeSystem,
   visibleOrgans,
   systemColors,
+  network,
+  activePathway,
+  pathwayStep,
+  pathwayPlaying,
+  onTogglePlay,
+  onSelectPathway,
   onSelectSystem,
   onOpenOrgan
 }: {
@@ -299,9 +371,18 @@ function BodyOverviewPanel({
   activeSystem: string | null;
   visibleOrgans: BodyOrganBrief[];
   systemColors: Record<string, string>;
+  network: OrganNetwork | null;
+  activePathway: OrganNetwork["pathways"][number] | null;
+  pathwayStep: number;
+  pathwayPlaying: boolean;
+  onTogglePlay: () => void;
+  onSelectPathway: (slug: string) => void;
   onSelectSystem: (slug: string) => void;
   onOpenOrgan: (slug: string) => void;
 }) {
+  const organName = (slug: string) =>
+    network?.nodes.find((node) => node.slug === slug)?.name ?? slug;
+
   return (
     <div className="panel-stack">
       <div className="panel-intro">
@@ -311,6 +392,19 @@ function BodyOverviewPanel({
           <p>{overview.description}</p>
         </div>
       </div>
+
+      {network && !activeSystem && (
+        <SystemCouplingCard
+          network={network}
+          activePathway={activePathway}
+          pathwayStep={pathwayStep}
+          pathwayPlaying={pathwayPlaying}
+          onTogglePlay={onTogglePlay}
+          onSelectPathway={onSelectPathway}
+          organName={organName}
+          onOpenOrgan={onOpenOrgan}
+        />
+      )}
 
       <div className="system-chip-grid">
         {overview.systems.map((system) => (
@@ -343,6 +437,211 @@ function BodyOverviewPanel({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function SystemCouplingCard({
+  network,
+  activePathway,
+  pathwayStep,
+  pathwayPlaying,
+  onTogglePlay,
+  onSelectPathway,
+  organName,
+  onOpenOrgan
+}: {
+  network: OrganNetwork;
+  activePathway: OrganNetwork["pathways"][number] | null;
+  pathwayStep: number;
+  pathwayPlaying: boolean;
+  onTogglePlay: () => void;
+  onSelectPathway: (slug: string) => void;
+  organName: (slug: string) => string;
+  onOpenOrgan: (slug: string) => void;
+}) {
+  const stepEdge = activePathway?.edges[pathwayStep] ?? null;
+  const stepEdgeData = stepEdge
+    ? network.edges.find((edge) => edgeKey(edge.from, edge.to) === edgeKey(stepEdge.from, stepEdge.to))
+    : null;
+
+  return (
+    <div className="coupling-card">
+      <div className="coupling-head">
+        <span className="coupling-icon"><Waves size={15} /></span>
+        <div>
+          <h3>系统不是孤立器官的集合</h3>
+          <p>
+            {network.edges.length} 条物质交换关系把 {network.nodes.length} 个器官连成整体。选择一条“物质之旅”，在左侧人体图上观察它的流向。
+          </p>
+        </div>
+      </div>
+
+      <div className="substance-legend" aria-label="物质图例">
+        {network.substances.map((substance) => (
+          <span key={substance.slug} title={substance.description}>
+            <i style={{ background: substance.color, boxShadow: `0 0 7px ${substance.color}` }} />
+            {substance.name}
+          </span>
+        ))}
+      </div>
+
+      <div className="pathway-grid">
+        {network.pathways.map((pathway) => (
+          <button
+            key={pathway.slug}
+            className={`pathway-chip${activePathway?.slug === pathway.slug ? " is-active" : ""}`}
+            onClick={() => onSelectPathway(pathway.slug)}
+          >
+            {pathway.name}
+          </button>
+        ))}
+      </div>
+
+      {activePathway && (
+        <div className="pathway-stage">
+          <div className="pathway-stage-head">
+            <strong>{activePathway.name}</strong>
+            <button className="pathway-play" onClick={onTogglePlay} title={pathwayPlaying ? "暂停" : "播放"}>
+              {pathwayPlaying ? <Pause size={13} /> : <Play size={13} />}
+              {pathwayPlaying ? "暂停" : "播放"}
+            </button>
+          </div>
+          <p className="pathway-story">{activePathway.story}</p>
+
+          <ol className="pathway-route" aria-label="流动步骤">
+            {activePathway.edges.map((edge, index) => {
+              const data = network.edges.find(
+                (item) => edgeKey(item.from, item.to) === edgeKey(edge.from, edge.to)
+              );
+              const isCurrent = index === pathwayStep;
+              const isPast = index < pathwayStep;
+              return (
+                <li key={`${edge.from}-${edge.to}-${index}`} className={isCurrent ? "is-current" : isPast ? "is-past" : ""}>
+                  <button
+                    className="pathway-node"
+                    onClick={() => onOpenOrgan(edge.from)}
+                  >
+                    {organName(edge.from)}
+                  </button>
+                  <span className="pathway-arrow">
+                    <ArrowRight size={12} />
+                    <span className="pathway-dots">
+                      {data?.substances.map((slug) => {
+                        const meta = network.substances.find((item) => item.slug === slug);
+                        return <i key={slug} style={{ background: meta?.color }} title={meta?.name} />;
+                      })}
+                    </span>
+                  </span>
+                  {index === activePathway.edges.length - 1 && (
+                    <button className="pathway-node" onClick={() => onOpenOrgan(edge.to)}>
+                      {organName(edge.to)}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+
+          {stepEdgeData && (
+            <div className="pathway-caption">
+              <span>
+                {organName(stepEdge!.from)} → {organName(stepEdge!.to)}
+              </span>
+              <p>{stepEdgeData.label}</p>
+              <small>
+                第 {pathwayStep + 1} / {activePathway.edges.length} 段
+              </small>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrganExchangeCard({
+  organSlug,
+  network,
+  systemColors,
+  onOpenOrgan
+}: {
+  organSlug: string;
+  network: OrganNetwork;
+  systemColors: Record<string, string>;
+  onOpenOrgan: (slug: string) => void;
+}) {
+  const outgoing = network.edges.filter((edge) => edge.from === organSlug);
+  const incoming = network.edges.filter((edge) => edge.to === organSlug);
+
+  const renderRow = (edge: OrganRelationEdge, direction: "out" | "in") => {
+    const otherSlug = direction === "out" ? edge.to : edge.from;
+    const other = network.nodes.find((node) => node.slug === otherSlug);
+    return (
+      <button key={`${direction}-${edge.from}-${edge.to}`} className="exchange-row" onClick={() => onOpenOrgan(otherSlug)}>
+        <span className="exchange-organ">
+          <i style={{ background: systemColors[other?.system_slug ?? ""] ?? "#9fe8c5" }} />
+          {other?.name ?? otherSlug}
+        </span>
+        <span className="exchange-flow">
+          <span className="exchange-dots">
+            {edge.substances.map((slug) => {
+              const meta = network.substances.find((item) => item.slug === slug);
+              return <i key={slug} style={{ background: meta?.color }} title={meta?.name} />;
+            })}
+          </span>
+          {direction === "out" ? <ArrowUpRight size={13} className="flow-out" /> : <ArrowLeft size={13} className="flow-in" />}
+        </span>
+        <small>{edge.label}</small>
+      </button>
+    );
+  };
+
+  return (
+    <div className="organ-exchange-card">
+      <h3 className="level-section-title">
+        与其他器官的物质交换 <small>（左侧人体图已高亮直接相关器官）</small>
+      </h3>
+      <p className="exchange-lede">
+        器官通过循环、呼吸、神经与内分泌通道实时耦合；下方箭头表示物质相对本器官的运输方向。
+      </p>
+
+      {incoming.length > 0 && (
+        <>
+          <p className="exchange-direction-title">
+            <ArrowLeft size={12} /> 接收
+          </p>
+          <div className="exchange-list">{incoming.map((edge) => renderRow(edge, "in"))}</div>
+        </>
+      )}
+
+      {outgoing.length > 0 && (
+        <>
+          <p className="exchange-direction-title">
+            <ArrowUpRight size={12} /> 输出
+          </p>
+          <div className="exchange-list">{outgoing.map((edge) => renderRow(edge, "out"))}</div>
+        </>
+      )}
+
+      {incoming.length === 0 && outgoing.length === 0 && (
+        <p className="exchange-empty">关系网络数据载入中……</p>
+      )}
+
+      <SubstanceLegendBar network={network} />
+    </div>
+  );
+}
+
+function SubstanceLegendBar({ network }: { network: OrganNetwork }) {
+  return (
+    <div className="substance-legend is-compact">
+      {network.substances.map((substance: Substance) => (
+        <span key={substance.slug} title={substance.description}>
+          <i style={{ background: substance.color, boxShadow: `0 0 6px ${substance.color}` }} />
+          {substance.name}
+        </span>
+      ))}
     </div>
   );
 }
@@ -403,9 +702,15 @@ function SystemPanel({
 
 function OrganPanel({
   organ,
+  network,
+  systemColors,
+  onOpenOrgan,
   onNavigate
 }: {
   organ: BodyOrgan;
+  network: OrganNetwork | null;
+  systemColors: Record<string, string>;
+  onOpenOrgan: (slug: string) => void;
   onNavigate: (to: string) => void;
 }) {
   return (
@@ -417,6 +722,15 @@ function OrganPanel({
         <span className="position-pill">位于 {organ.position_label}</span>
       </div>
       <p className="level-overview">{organ.description}</p>
+
+      {network && (
+        <OrganExchangeCard
+          organSlug={organ.slug}
+          network={network}
+          systemColors={systemColors}
+          onOpenOrgan={onOpenOrgan}
+        />
+      )}
 
       <div className="fact-grid">
         <div className="fact-block">

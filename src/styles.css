@@ -217,6 +217,94 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 .inline-link { background: transparent; padding: 0; color: var(--level-color, #9fe8c5); text-decoration: underline; text-underline-offset: 3px; font-size: 13px; }
 .inline-link:hover { color: #fff; }
 
+/* ===== 器官关系网络 ===== */
+.body-network-toggle { display: flex; margin-top: 10px; }
+.body-network-toggle button { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border: 1px solid rgba(140, 209, 238, .35); border-radius: 999px; background: rgba(124, 200, 255, .07); color: #9fc6de; font-size: 11.5px; transition: all .18s; }
+.body-network-toggle button:hover { border-color: rgba(140, 209, 238, .7); color: #dff2ff; }
+.body-network-toggle button.is-active { background: rgba(124, 200, 255, .18); border-color: #7cc8ff; color: #dff2ff; box-shadow: 0 0 16px rgba(124, 200, 255, .25); }
+.body-network-toggle svg { color: #7cc8ff; }
+
+.network-lane { fill: none; stroke-linecap: round; transition: opacity .28s, stroke-width .28s; }
+.network-lane.is-ambient { stroke-width: 1; opacity: .14; }
+.network-lane.is-dim { stroke-width: 1; opacity: .07; }
+.network-lane.is-active { stroke-width: 1.7; opacity: .95; filter: drop-shadow(0 0 2.5px currentColor); }
+.network-lane.is-pulse { stroke-width: 2.4; opacity: 1; }
+.network-lane.is-pulse-halo { fill: none; stroke: #eafcf0; stroke-width: 5; opacity: .22; stroke-linecap: round; animation: edgeHalo 1.15s ease-in-out infinite; }
+@keyframes edgeHalo {
+  0%, 100% { opacity: .1; stroke-width: 3.5; }
+  50% { opacity: .32; stroke-width: 6.5; }
+}
+.flow-particle { pointer-events: none; }
+.network-edge-active { pointer-events: none; }
+.diagram-hotspot.is-related .hotspot-ring { stroke-dasharray: 3 3; stroke-width: 1.8; }
+.diagram-hotspot.is-related .hotspot-core { animation: coreBlink 1.2s ease-in-out infinite; }
+@keyframes coreBlink { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .network-lane.is-pulse-halo, .diagram-hotspot.is-related .hotspot-core { animation: none; }
+}
+
+/* 图例 */
+.substance-legend { display: flex; flex-wrap: wrap; gap: 8px; }
+.substance-legend span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid rgba(184, 232, 203, .16); border-radius: 999px; color: #a9c2b4; font-size: 10.5px; cursor: default; transition: all .15s; }
+.substance-legend span:hover { border-color: rgba(200, 240, 218, .45); color: #e4f5ea; }
+.substance-legend i { width: 8px; height: 8px; border-radius: 50%; }
+.substance-legend.is-compact { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(184, 232, 203, .12); }
+
+/* 系统耦合卡片 */
+.coupling-card { border: 1px solid rgba(124, 200, 255, .22); border-radius: 6px; padding: 22px 22px 20px; background: linear-gradient(150deg, rgba(28, 52, 60, .55), rgba(12, 29, 24, .9) 60%); position: relative; overflow: hidden; }
+.coupling-card::before { content: ""; position: absolute; width: 210px; height: 210px; right: -80px; top: -90px; border: 1px dashed rgba(124, 200, 255, .2); border-radius: 50%; pointer-events: none; }
+.coupling-head { display: flex; gap: 13px; align-items: flex-start; position: relative; }
+.coupling-icon { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid rgba(124, 200, 255, .5); border-radius: 50%; color: #7cc8ff; background: rgba(124, 200, 255, .08); }
+.coupling-head h3 { margin: 0 0 6px; font: 500 19px "Source Serif 4", serif; color: #e6f4f7; }
+.coupling-head p { margin: 0; color: #93aba3; font-size: 12px; line-height: 1.8; }
+.coupling-card .substance-legend { margin: 15px 0 13px; position: relative; }
+
+.pathway-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; position: relative; }
+.pathway-chip { text-align: center; padding: 10px 8px; border: 1px solid rgba(184, 232, 203, .18); border-radius: 4px; background: rgba(13, 30, 25, .7); color: #c4dccf; font-size: 12px; transition: all .18s; }
+.pathway-chip:hover { border-color: rgba(124, 200, 255, .55); color: #fff; transform: translateY(-2px); }
+.pathway-chip.is-active { border-color: #7cc8ff; background: rgba(124, 200, 255, .16); color: #eaf7ff; box-shadow: 0 0 18px rgba(124, 200, 255, .18); font-weight: 600; }
+
+.pathway-stage { margin-top: 15px; padding-top: 16px; border-top: 1px solid rgba(184, 232, 203, .14); position: relative; }
+.pathway-stage-head { display: flex; align-items: center; justify-content: space-between; }
+.pathway-stage-head strong { color: #e2f4f8; font-size: 14px; font-weight: 600; }
+.pathway-play { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px solid rgba(184, 232, 203, .25); border-radius: 999px; background: transparent; color: #a8cabb; font-size: 11px; }
+.pathway-play:hover { color: #fff; border-color: rgba(184, 232, 203, .55); }
+.pathway-story { margin: 10px 0 14px; color: #a6bdb1; font-size: 12.5px; line-height: 1.85; }
+
+.pathway-route { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; counter-reset: step; }
+.pathway-route li { counter-increment: step; display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid rgba(184, 232, 203, .1); border-radius: 4px; background: rgba(10, 24, 20, .55); opacity: .45; transition: all .3s; font-size: 11px; color: #7d998b; }
+.pathway-route li::before { content: counter(step, decimal-leading-zero); font: 9px "DM Mono", monospace; color: #5d7a6c; margin-right: 2px; }
+.pathway-route li.is-past { opacity: .7; }
+.pathway-route li.is-current { opacity: 1; border-color: rgba(124, 200, 255, .55); background: rgba(124, 200, 255, .09); box-shadow: 0 0 14px rgba(124, 200, 255, .12); }
+.pathway-node { background: transparent; padding: 3px 8px; border-radius: 3px; color: inherit; font-size: 11.5px; }
+.pathway-route li.is-current .pathway-node { color: #e8f7ff; font-weight: 600; }
+.pathway-node:hover { background: rgba(184, 232, 203, .1); color: #fff; }
+.pathway-arrow { display: inline-flex; align-items: center; gap: 5px; color: #6f8e7e; }
+.pathway-route li.is-current .pathway-arrow { color: #9fd4f0; }
+.pathway-dots, .exchange-dots { display: inline-flex; align-items: center; gap: 3px; }
+.pathway-dots i, .exchange-dots i { width: 6px; height: 6px; border-radius: 50%; }
+.pathway-caption { margin-top: 13px; padding: 11px 14px; border-left: 2px solid #7cc8ff; border-radius: 0 4px 4px 0; background: rgba(124, 200, 255, .08); }
+.pathway-caption span { display: block; color: #d4ecf8; font-size: 12.5px; font-weight: 600; }
+.pathway-caption p { margin: 4px 0 2px; color: #9bb8ab; font-size: 11.5px; line-height: 1.7; }
+.pathway-caption small { color: #6b8a7c; font: 9px "DM Mono", monospace; letter-spacing: .8px; }
+
+/* 器官页：物质交换 */
+.organ-exchange-card { border: 1px solid color-mix(in srgb, var(--level-color, #7cc8ff) 26%, transparent); border-radius: 6px; padding: 18px 20px; background: linear-gradient(150deg, color-mix(in srgb, var(--level-color, #7cc8ff) 8%, transparent), rgba(10, 24, 20, .8) 55%); }
+.organ-exchange-card .level-section-title { margin-top: 0; }
+.exchange-lede { margin: 8px 0 14px; color: #92aba0; font-size: 11.5px; line-height: 1.75; }
+.exchange-direction-title { display: flex; align-items: center; gap: 7px; margin: 12px 0 8px; color: var(--level-color, #9fe8c5); font-size: 11px; letter-spacing: .6px; font-weight: 600; }
+.exchange-list { display: grid; gap: 7px; }
+.exchange-row { position: relative; display: grid; grid-template-columns: minmax(86px, 120px) 26px 1fr; grid-template-areas: "organ flow label"; gap: 4px 10px; align-items: center; text-align: left; padding: 10px 13px; border: 1px solid rgba(184, 232, 203, .12); border-radius: 4px; background: rgba(10, 24, 20, .6); transition: border-color .15s, background .15s, transform .15s; }
+.exchange-row:hover { border-color: color-mix(in srgb, var(--level-color, #7cc8ff) 50%, transparent); background: rgba(18, 40, 33, .85); transform: translateX(3px); }
+.exchange-organ { grid-area: organ; display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: #e4f2ea; }
+.exchange-organ i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.exchange-flow { grid-area: flow; display: inline-flex; align-items: center; gap: 4px; }
+.exchange-dots { flex-direction: column; gap: 3px; }
+.exchange-flow svg { color: var(--level-color, #9fe8c5); }
+.exchange-row small { grid-area: label; color: #829e91; font-size: 11px; line-height: 1.55; }
+.exchange-empty { color: #7e988b; font-size: 12px; }
+
 .body-loading { min-height: 70vh; }
 
 @media (max-width: 1080px) {
@@ -231,4 +319,5 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
   .detail-page { padding-top: 62px; }.topic-hero { min-height: 360px; padding: 38px 20px; }.topic-hero::after { width: 230px; height: 230px; right: -50px; top: 80px; }.topic-hero-icon { margin-top: 62px; }.topic-hero h1 { font-size: 48px; }.topic-content { padding: 45px 20px 70px; grid-template-columns: 1fr; gap: 27px; }.topic-aside { display: flex; align-items: center; justify-content: space-between; }.topic-aside strong { font-size: 30px; }.article-grid { grid-template-columns: 1fr; }.article-card { min-height: 225px; }
   .reading-page { padding: 94px 20px 70px; }.reading-page .back-button { margin-bottom: 45px; }.reading-page h1 { font-size: 44px; }.reading-page header p { font-size: 15px; }.reading-visual { height: 250px; margin: 42px 0; }.article-body { grid-template-columns: 1fr; gap: 24px; }.article-body > p { font-size: 18px; }.article-body aside { max-width: 200px; }
   .body-lab { padding: 90px 20px 60px; }.body-lab-header { margin-bottom: 30px; }.body-workspace { grid-template-columns: 1fr; gap: 24px; }.body-figure-pane { position: static; }.body-diagram svg { max-height: 62vh; max-width: 380px; margin: 0 auto; }.system-chip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.organ-hotspot-list, .organ-cards, .tissue-cards, .cell-cards { grid-template-columns: 1fr; }.fact-grid, .cell-facts { grid-template-columns: 1fr; }.level-hero { padding: 22px 20px; }.body-launch-card { grid-template-columns: 44px 1fr auto; gap: 14px; padding: 20px; }.body-launch-orb { width: 38px; height: 38px; }
+  .coupling-card { padding: 18px 16px; }.pathway-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.exchange-row { grid-template-columns: minmax(80px, 110px) 22px 1fr; padding: 10px 11px; }.pathway-route li { font-size: 10.5px; }
 }

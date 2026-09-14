@@ -109,5 +109,75 @@ await fetch("http://localhost:8795/api/interactions", {
   body: JSON.stringify({ sessionId: "test-session", eventType: "explore", entityType: "organ", entitySlug: "heart" })
 });
 
+console.log("\n[7] 器官关系网络");
+window.location.hash = "#body";
+window.dispatchEvent(new window.Event("hashchange"));
+await sleep(600);
+// 前面进入过神经系统，先回到“全部”视图，耦合卡片只在人体总览层显示
+const allFilter = [...document.querySelectorAll(".body-system-filter button")].find(
+  (b) => (b.textContent ?? "").trim() === "全部"
+);
+allFilter?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(500);
+assert(text().includes("系统不是孤立器官的集合"), "总览显示系统耦合引导卡片");
+assert(text().includes("氧气之旅") && text().includes("水盐稳态"), "显示全部跨系统协作路径");
+assert(document.querySelectorAll(".substance-legend i").length >= 8, "图例至少包含 8 种物质标记");
+assert(document.querySelectorAll(".network-lane").length > 20, `人体图叠加器官关系连线（实际 ${document.querySelectorAll(".network-lane").length} 条 lane）`);
+
+// 播放“氧气之旅”路径
+const oxygenChip = [...document.querySelectorAll(".pathway-chip")].find((b) =>
+  (b.textContent ?? "").includes("氧气之旅")
+);
+assert(Boolean(oxygenChip), "找到氧气之旅路径按钮");
+oxygenChip.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(300);
+assert(text().includes("肺泡向血液充氧") || text().includes("空气经气管抵达肺泡"), "显示当前路径段的物质说明");
+const currentStep = document.querySelector(".pathway-route li.is-current");
+assert(Boolean(currentStep), "路径当前步骤被高亮");
+const pulseHalo = document.querySelectorAll(".network-lane.is-pulse-halo");
+assert(pulseHalo.length >= 1, "人体图上有正在播放脉冲的路径段");
+
+// 暂停播放
+const pauseButton = [...document.querySelectorAll(".pathway-play")].find((b) => (b.textContent ?? "").includes("暂停"));
+pauseButton?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(150);
+assert((document.querySelector(".pathway-play")?.textContent ?? "").includes("播放"), "路径可暂停");
+
+console.log("\n[8] 器官页物质交换关系");
+window.location.hash = "#body/organ/heart";
+window.dispatchEvent(new window.Event("hashchange"));
+await sleep(700);
+assert(text().includes("与其他器官的物质交换"), "器官面板显示物质交换区块");
+assert(text().includes("接收") && text().includes("输出"), "区分接收与输出方向");
+const exchangeRows = document.querySelectorAll(".exchange-row");
+assert(exchangeRows.length >= 3, `心脏至少有 3 条直接交换关系（实际 ${exchangeRows.length}）`);
+assert([...exchangeRows].some((r) => (r.textContent ?? "").includes("肺")), "交换关系中出现肺（跨系统耦合）");
+
+// 关系网络开关
+const toggle = [...document.querySelectorAll(".body-network-toggle button")][0];
+assert(Boolean(toggle), "存在关系网络开关");
+toggle.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(200);
+assert(document.querySelectorAll(".network-lane").length === 0, "关闭后关系连线消失");
+toggle.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(200);
+assert(document.querySelectorAll(".network-lane").length > 0, "重新开启后关系连线恢复");
+
+console.log("\n[9] 关系 API");
+const relations = await fetch("http://localhost:8795/api/body/relations").then((r) => r.json());
+assert(relations.edges.length >= 30, `关系边数量充足（${relations.edges.length}）`);
+assert(relations.pathways.length === 7, "返回 7 条协作路径");
+assert(relations.substances.length === 8, "返回 8 种物质元数据");
+assert(relations.nodes.length === 16, "返回 16 个器官节点坐标");
+const edgeSlugs = new Set(relations.nodes.map((n) => n.slug));
+assert(
+  relations.edges.every((e) => edgeSlugs.has(e.from) && edgeSlugs.has(e.to)),
+  "所有关系边都引用存在的器官"
+);
+assert(
+  relations.edges.some((e) => e.substances.includes("oxygen") && e.from === "lungs" && e.to === "blood-vessels"),
+  "肺 → 血管携带氧气"
+);
+
 console.log(failures.length ? `\n失败 ${failures.length} 项` : "\n全部冒烟测试通过");
 process.exit(failures.length ? 1 : 0);
