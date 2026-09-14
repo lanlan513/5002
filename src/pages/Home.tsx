@@ -1,4 +1,4 @@
-import { ArrowRight, Database, Layers, Tags } from "lucide-react";
+import { ArrowRight, Database, Layers, Network, Tags } from "lucide-react";
 import type { CatalogStats, CategoryMeta, PaginatedRecords } from "../../shared/contract";
 import { api } from "../api/client";
 import { useResource } from "../hooks/useResource";
@@ -33,11 +33,11 @@ export function Home({
           <a className="primary-button" href={buildHash("/data")}>
             浏览全部数据 <ArrowRight size={16} />
           </a>
+          <a className="ghost-button" href={buildHash("/graph")}>
+            <Network size={15} /> 进入知识图谱
+          </a>
           <a className="ghost-button" href={buildHash("/insights")}>
             进入可视化中心
-          </a>
-          <a className="ghost-button" href={buildHash("/data", { q: "进化" })}>
-            试试搜索“进化”
           </a>
         </div>
         {stats.state.status === "success" && (

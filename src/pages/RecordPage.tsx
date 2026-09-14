@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowUpRight, Link2, MapPin, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Link2, MapPin, Network, RefreshCw } from "lucide-react";
 import { api } from "../api/client";
 import { useResource } from "../hooks/useResource";
 import type { CategoryMeta, RecordDetail } from "../../shared/contract";
@@ -41,6 +41,9 @@ export function RecordPage({
       <button className="back-button" onClick={onBack}>
         <ArrowLeft size={16} /> 返回数据浏览
       </button>
+      <a className="kg-entry-button" href={buildHash("/graph", { node: id })}>
+        <Network size={15} /> 在知识图谱中探索该实体
+      </a>
 
       <header className="detail-hero">
         <div className="detail-badges">

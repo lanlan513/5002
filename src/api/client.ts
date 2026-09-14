@@ -1,9 +1,17 @@
 import {
   type CatalogStats,
   type CategoryMeta,
+  type ExpandResponse,
+  type GraphStats,
+  type NeighborResponse,
+  type NodeDomain,
   type PaginatedRecords,
+  type PathResponse,
   type RecordDetail,
-  type RecordQuery
+  type RecordQuery,
+  type RelationTypeMeta,
+  type GraphSearchHit,
+  type GraphNode
 } from "../../shared/contract";
 
 /** 所有 API 错误都归一化为带 message 的 Error，供 UI 统一展示 */
@@ -50,5 +58,30 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId, eventType: "view", entityType, entityId })
     }).catch(() => undefined); // 埋点失败不影响浏览
-  }
+  },
+
+  // ───── 跨领域知识图谱 ─────
+  graphStats: () => request<GraphStats>("/api/graph/stats"),
+  graphRelationTypes: () => request<RelationTypeMeta[]>("/api/graph/relation-types"),
+  graphSearch: (q: string, domain?: NodeDomain, limit = 12) =>
+    request<GraphSearchHit[]>(
+      `/api/graph/search?${new URLSearchParams({ q, limit: String(limit), ...(domain ? { domain } : {}) })}`
+    ),
+  graphNode: (id: string) => request<GraphNode>(`/api/graph/nodes/${encodeURIComponent(id)}`),
+  graphNeighbors: (id: string, relation?: string) =>
+    request<NeighborResponse>(
+      `/api/graph/neighbors/${encodeURIComponent(id)}${relation ? `?relation=${relation}` : ""}`
+    ),
+  graphExpand: (id: string, existing: string[]) =>
+    request<ExpandResponse>(
+      `/api/graph/expand/${encodeURIComponent(id)}?existing=${encodeURIComponent(existing.join(","))}`
+    ),
+  graphSubgraph: (id: string, depth = 1) =>
+    request<{ nodes: GraphNode[]; edges: import("../../shared/contract").GraphEdge[] }>(
+      `/api/graph/subgraph/${encodeURIComponent(id)}?depth=${depth}`
+    ),
+  graphPath: (from: string, to: string, limit = 5) =>
+    request<PathResponse>(
+      `/api/graph/path?${new URLSearchParams({ from, to, limit: String(limit) })}`
+    )
 };

@@ -1,5 +1,5 @@
 import { Component, useEffect, useState, type ReactNode } from "react";
-import { Database, Menu, Search, X } from "lucide-react";
+import { Database, Menu, Network, Search, X } from "lucide-react";
 import type { CategoryMeta } from "../shared/contract";
 import { api } from "./api/client";
 import { useResource } from "./hooks/useResource";
@@ -10,6 +10,7 @@ import { Home } from "./pages/Home";
 import { DataBrowser } from "./pages/DataBrowser";
 import { RecordPage } from "./pages/RecordPage";
 import { Insights } from "./pages/insights/Insights";
+import { KnowledgeGraph } from "./pages/graph/KnowledgeGraph";
 
 /** 渲染期崩溃兜底，保证局部错误不会白屏整个数据中心 */
 class ErrorBoundary extends Component<{ children: ReactNode }, { message: string | null }> {
@@ -99,6 +100,10 @@ export function App() {
         />
       );
     }
+    if (route.path === "/graph") {
+      const focus = route.params.get("node") ?? undefined;
+      return <KnowledgeGraph initialId={focus} />;
+    }
     const recordMatch = route.path.match(/^\/record\/(.+)$/);
     if (recordMatch) {
       return (
@@ -129,6 +134,9 @@ export function App() {
           <a href={buildHash("/")} onClick={() => setMenuOpen(false)}>总览</a>
           <a href={buildHash("/data")} onClick={() => setMenuOpen(false)}>全部数据</a>
           <a href={buildHash("/insights")} onClick={() => setMenuOpen(false)}>可视化中心</a>
+          <a href={buildHash("/graph")} onClick={() => setMenuOpen(false)} className="nav-graph-link">
+            <Network size={13} /> 知识图谱
+          </a>
           <span className="nav-divider" />
           {categoryList.map((category) => (
             <a
