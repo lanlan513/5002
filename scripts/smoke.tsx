@@ -154,8 +154,89 @@ await settle(700);
 body = text();
 check("重试后恢复数据（出现细胞记录）", body.includes("CD8") || exists(".record-card"));
 
-// ── 9. 逐字符输入：保持焦点、不重挂载、多字符检索完成 ──────
-console.log("\n[9] 连续键入搜索");
+// ── 9. 可视化中心：图表切换 / 维度切换 / 筛选 / 时间范围 ─────
+console.log("\n[9] 可视化中心");
+await go("#/insights", 900);
+body = text();
+check("可视化标题出现", body.includes("数据可视化中心"));
+check("四种图表切换按钮齐全",
+  ["柱状图", "折线图", "散点图", "网络图"].every((label) => body.includes(label)));
+check("默认渲染柱状图（存在数值明细表）", exists(".chart-table") && body.includes("数值明细"));
+check("摘要统计包含全部 37 条记录", body.includes("纳入分析的记录") && rootEl.querySelectorAll(".summary-stat").length === 5);
+check("柱状图为 SVG 绘制", !!rootEl.querySelector(".chart-panel svg rect"));
+check("柱上标注数值", !!rootEl.querySelector(".chart-value-inline"));
+
+// 切换到折线图
+await act(async () => {
+  [...rootEl.querySelectorAll(".chart-tab")].find((el) => el.textContent?.includes("折线图"))?.click();
+});
+await settle(300);
+check("URL 反映 chart=line", window.location.hash.includes("chart=line"));
+check("折线图渲染出折线 path", rootEl.querySelectorAll(".chart-panel svg path").length >= 2);
+check("折线默认按月份分组", text().includes("更新月份"));
+
+// 折线图改度量为平均指标数
+const measureSelect = [...rootEl.querySelectorAll(".control-field select")].find(
+  (el) => (el as HTMLSelectElement).value === "records"
+) as HTMLSelectElement | undefined;
+await act(async () => {
+  if (measureSelect) {
+    measureSelect.value = "avgMetrics";
+    measureSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+  }
+});
+await settle(300);
+check("切换度量同步到 URL", window.location.hash.includes("measure=avgMetrics"));
+
+// 切到散点图
+await act(async () => {
+  [...rootEl.querySelectorAll(".chart-tab")].find((el) => el.textContent?.includes("散点图"))?.click();
+});
+await settle(300);
+const scatterDots = rootEl.querySelectorAll(".chart-scatter-dot").length;
+check("散点图每个点对应一条记录（37 个点）", scatterDots === 37, `实际 ${scatterDots}`);
+
+// 散点图点击气泡跳转详情
+await act(async () => {
+  (rootEl.querySelector(".chart-scatter-dot") as SVGGraphicsElement | null)?.dispatchEvent(
+    new window.MouseEvent("click", { bubbles: true })
+  );
+});
+await settle(400);
+check("点击散点进入记录详情页", window.location.hash.startsWith("#/record/"));
+
+// 回到网络图并切换关系类型
+await go("#/insights?chart=network", 700);
+check("网络图绘制节点与边",
+  rootEl.querySelectorAll(".network-node").length > 5 && rootEl.querySelectorAll(".network-edge").length > 5);
+const netSelect = rootEl.querySelector<HTMLSelectElement>(".control-field select");
+await act(async () => {
+  if (netSelect) {
+    netSelect.value = "category_kingdom";
+    netSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+  }
+});
+await settle(300);
+check("网络图关系类型写入 URL", window.location.hash.includes("net=category_kingdom"));
+check("右列标题切换为生物分类", text().includes("生物分类（界）"));
+
+// 筛选 + 时间范围联动
+await go("#/insights?chart=bar&category=gene", 700);
+body = text();
+const statValues = [...rootEl.querySelectorAll(".summary-stat strong")].map((el) => el.textContent);
+check("数据域筛选后只剩基因记录（7 条）", statValues[0]?.startsWith("7"), `实际 ${statValues[0] ?? "无"}`);
+const barRows = rootEl.querySelectorAll(".chart-table tbody tr").length;
+check("基因域下分组数量合理（≤ 8 个）", barRows <= 8, `实际 ${barRows}`);
+
+await go("#/insights?chart=line&from=2026-06&to=2026-08", 700);
+body = text();
+check("时间范围生效：跨度文案显示 2026年6月", body.includes("2026年6月") && body.includes("2026年8月"));
+
+await go("#/insights?chart=bar&from=2030-01&to=2030-02", 700);
+check("时间范围无数据时显示空状态", text().includes("没有可绘制的数据"));
+check("空状态提供清除按钮", !!rootEl.querySelector(".state-block .secondary-button"));
+
+// ── 10. 逐字符输入：保持焦点、不重挂载、多字符检索完成 ──────console.log("\n[9] 连续键入搜索");
 await go("#/data");
 const search = () => rootEl.querySelector<HTMLInputElement>(".search-box input");
 const inputEl = search();

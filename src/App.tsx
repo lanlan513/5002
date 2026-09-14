@@ -9,6 +9,7 @@ import { ErrorState, FullPageLoading } from "./components/States";
 import { Home } from "./pages/Home";
 import { DataBrowser } from "./pages/DataBrowser";
 import { RecordPage } from "./pages/RecordPage";
+import { Insights } from "./pages/insights/Insights";
 
 /** 渲染期崩溃兜底，保证局部错误不会白屏整个数据中心 */
 class ErrorBoundary extends Component<{ children: ReactNode }, { message: string | null }> {
@@ -88,6 +89,16 @@ export function App() {
         />
       );
     }
+    if (route.path === "/insights") {
+      return (
+        <Insights
+          categories={categoryList}
+          params={route.params}
+          navigate={navigate}
+          onOpenRecord={openRecord}
+        />
+      );
+    }
     const recordMatch = route.path.match(/^\/record\/(.+)$/);
     if (recordMatch) {
       return (
@@ -117,6 +128,7 @@ export function App() {
         <nav className={menuOpen ? "main-nav is-open" : "main-nav"} aria-label="主导航">
           <a href={buildHash("/")} onClick={() => setMenuOpen(false)}>总览</a>
           <a href={buildHash("/data")} onClick={() => setMenuOpen(false)}>全部数据</a>
+          <a href={buildHash("/insights")} onClick={() => setMenuOpen(false)}>可视化中心</a>
           <span className="nav-divider" />
           {categoryList.map((category) => (
             <a
