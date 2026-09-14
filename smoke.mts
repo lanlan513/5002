@@ -153,6 +153,16 @@ const exchangeRows = document.querySelectorAll(".exchange-row");
 assert(exchangeRows.length >= 3, `心脏至少有 3 条直接交换关系（实际 ${exchangeRows.length}）`);
 assert([...exchangeRows].some((r) => (r.textContent ?? "").includes("肺")), "交换关系中出现肺（跨系统耦合）");
 
+// 回归：当前系统为循环，但跨系统的直接关联器官（周围神经/神经调节心脏）不得被系统筛选压暗
+const nerveHotspot = [...document.querySelectorAll(".diagram-hotspot")].find((el) =>
+  el.getAttribute("aria-label")?.startsWith("周围神经")
+);
+assert(Boolean(nerveHotspot), "找到跨系统关联的周围神经热点");
+assert(!nerveHotspot?.classList.contains("is-dimmed"), "跨系统直接关联器官保持高亮，不被压暗");
+assert(nerveHotspot?.classList.contains("is-related"), "跨系统直接关联器官带关系高亮样式");
+const dimmedDuringFocus = document.querySelectorAll(".diagram-hotspot.is-dimmed").length;
+assert(dimmedDuringFocus > 0, "无关节器仍被压暗（系统筛选语义保留）");
+
 // 关系网络开关
 const toggle = [...document.querySelectorAll(".body-network-toggle button")][0];
 assert(Boolean(toggle), "存在关系网络开关");

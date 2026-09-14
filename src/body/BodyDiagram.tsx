@@ -172,9 +172,12 @@ export function BodyDiagram({
   const networkActive = activeKeySet.size > 0;
 
   const isDimmed = (organ: BodyOrganBrief) => {
-    if (activeSystem !== null && organ.system_slug !== activeSystem) return true;
-    if (networkActive && !relatedNodes.has(organ.slug)) return true;
-    return false;
+    const isRelated = networkActive && relatedNodes.has(organ.slug);
+    // 本次高亮的关系节点一律保留亮度——即使它属于另一个系统，
+    // 否则系统筛选会把跨系统的直接关联器官（如心脏 ↔ 周围神经）压暗，使高亮失效。
+    if (isRelated) return false;
+    if (networkActive) return true; // 高亮态：非关系节点统一压暗
+    return activeSystem !== null && organ.system_slug !== activeSystem; // 仅系统筛选：非本系统才压暗
   };
 
   const tooltipOrgan = hovered;
