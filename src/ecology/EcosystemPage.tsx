@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, Crosshair, Eye, Layers, Swords, X } from "lucide-react";
 import { api, type EcosystemDetail, type WebNode } from "../api";
 import FoodWeb from "./FoodWeb";
 import { ecosystemIcon } from "./EcosystemsPage";
+import {
+  deriveCompetition,
+  foodChains,
+  neighborhood,
+  type CompetitionLink,
+  type GraphLink
+} from "./food-web-utils";
 
 const ROLE_LABELS: Record<string, string> = {
   producer: "生产者",
@@ -19,7 +26,7 @@ const TROPHIC_LABELS: Record<number, string> = {
   5: "第五营养级（顶级消费者）"
 };
 
-/** 生态系统详情页：网络图 + 物种 / 环境因素信息面板 */
+/** 生态系统详情页：食物网 + 局部观察 + 物种 / 环境因素信息面板 */
 export default function EcosystemPage({
   slug,
   onNavigate
@@ -30,10 +37,15 @@ export default function EcosystemPage({
   const [detail, setDetail] = useState<EcosystemDetail | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCompetition, setShowCompetition] = useState(true);
+  const [focusRoot, setFocusRoot] = useState<string | null>(null);
+  const [focusDepth, setFocusDepth] = useState<1 | 2>(1);
 
   useEffect(() => {
     setDetail(null);
     setSelectedId(null);
+    setFocusRoot(null);
+    setFocusDepth(1);
     api
       .ecosystem(slug)
       .then((loaded) => {
@@ -42,6 +54,23 @@ export default function EcosystemPage({
       })
       .catch(() => setError("没有找到这个生态系统"));
   }, [slug]);
+
+  // 竞争关系不入库：从共享食物资源的捕食 / 分解关系中实时推导
+  const competitionLinks = useMemo(
+    () => (detail ? deriveCompetition(detail.links) : []),
+    [detail]
+  );
+
+  const graphLinks: GraphLink[] = useMemo(
+    () => (detail ? [...detail.links, ...(showCompetition ? competitionLinks : [])] : []),
+    [detail, showCompetition, competitionLinks]
+  );
+
+  // 局部观察模式：仅保留焦点节点 N 层以内的子网络
+  const visibleIds = useMemo(
+    () => (detail && focusRoot ? neighborhood(graphLinks, focusRoot, focusDepth) : null),
+    [detail, focusRoot, focusDepth, graphLinks]
+  );
 
   const selected = useMemo(
     () => detail?.nodes.find((node) => node.id === selectedId) ?? null,
@@ -53,6 +82,7 @@ export default function EcosystemPage({
 
   const Icon = ecosystemIcon(detail.icon);
   const factors = detail.nodes.filter((node) => node.kind === "factor");
+  const focusNode = focusRoot ? detail.nodes.find((node) => node.id === focusRoot) : null;
 
   return (
     <section className="eco-detail" style={{ "--eco-color": detail.color } as React.CSSProperties}>
@@ -77,33 +107,80 @@ export default function EcosystemPage({
 
       <div className="eco-factor-strip">
         <span className="strip-label">环境因素</span>
-        {factors.map((factor) => (
-          <button
-            key={factor.id}
-            className={selectedId === factor.id ? "factor-chip is-active" : "factor-chip"}
-            onClick={() => setSelectedId(selectedId === factor.id ? null : factor.id)}
-            title={factor.description}
-          >
-            {factor.name}
-            {factor.note && <small>{factor.note}</small>}
-          </button>
-        ))}
+        {factors.map((factor) => {
+          const hiddenInFocus = visibleIds && !visibleIds.has(factor.id);
+          return (
+            <button
+              key={factor.id}
+              className={[
+                "factor-chip",
+                selectedId === factor.id ? "is-active" : "",
+                hiddenInFocus ? "is-out" : ""
+              ].join(" ")}
+              disabled={!!hiddenInFocus}
+              onClick={() => setSelectedId(selectedId === factor.id ? null : factor.id)}
+              title={hiddenInFocus ? "该因素不在当前局部网络中" : factor.description}
+            >
+              {factor.name}
+              {factor.note && <small>{factor.note}</small>}
+            </button>
+          );
+        })}
       </div>
+
+      {/* 图层工具栏：竞争关系开关 + 局部观察深度 */}
+      <div className="web-toolbar">
+        <button
+          className={showCompetition ? "web-toggle is-on" : "web-toggle"}
+          onClick={() => setShowCompetition((on) => !on)}
+          title="竞争关系从「取食相同食物」的物种自动推导"
+        >
+          <Swords size={13} /> 竞争关系
+          <i className="toggle-state">{showCompetition ? "显示" : "隐藏"}</i>
+        </button>
+        {focusRoot && (
+          <div className="depth-switch" role="group" aria-label="局部网络范围">
+            <Layers size={13} />
+            <button className={focusDepth === 1 ? "is-active" : ""} onClick={() => setFocusDepth(1)}>1 层邻里</button>
+            <button className={focusDepth === 2 ? "is-active" : ""} onClick={() => setFocusDepth(2)}>2 层邻里</button>
+          </div>
+        )}
+      </div>
+
+      {focusRoot && focusNode && (
+        <div className="focus-banner">
+          <Crosshair size={15} />
+          <span>
+            局部网络观察中 · 焦点：<strong>{focusNode.name}</strong>
+            {visibleIds && <em>（{visibleIds.size} 个节点）</em>}
+          </span>
+          <button className="focus-exit" onClick={() => setFocusRoot(null)}>
+            <X size={14} /> 显示完整食物网
+          </button>
+        </div>
+      )}
 
       <div className={selected ? "eco-stage with-panel" : "eco-stage"}>
         <FoodWeb
           nodes={detail.nodes}
-          links={detail.links}
+          links={graphLinks}
           accent={detail.color}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          visibleIds={visibleIds}
         />
         {selected && (
           <NodePanel
             node={selected}
             detail={detail}
+            competitionLinks={competitionLinks}
+            focused={focusRoot === selected.id}
             onSelect={setSelectedId}
             onClose={() => setSelectedId(null)}
+            onFocus={(id) => {
+              setFocusRoot(id);
+              setFocusDepth(1);
+            }}
           />
         )}
       </div>
@@ -111,41 +188,58 @@ export default function EcosystemPage({
   );
 }
 
-/** 节点信息面板：展示物种在生态系统中的位置与全部关系 */
+/** 节点信息面板：主要食物、天敌、竞争者、能量链与全部关系 */
 function NodePanel({
   node,
   detail,
+  competitionLinks,
+  focused,
   onSelect,
-  onClose
+  onClose,
+  onFocus
 }: {
   node: WebNode;
   detail: EcosystemDetail;
+  competitionLinks: CompetitionLink[];
+  focused: boolean;
   onSelect: (id: string) => void;
   onClose: () => void;
+  onFocus: (id: string) => void;
 }) {
   const nameOf = (id: string) => detail.nodes.find((item) => item.id === id)?.name ?? id;
 
-  const incoming = detail.links.filter((link) => link.to === node.id);
-  const outgoing = detail.links.filter((link) => link.from === node.id);
+  const energyIn = detail.links.filter((link) => link.to === node.id && link.type === "energy");
+  const energyOut = detail.links.filter((link) => link.from === node.id && link.type === "energy");
+  const preyIds = energyIn.map((link) => link.from);
+  const predatorIds = energyOut.map((link) => link.to);
+
+  // 竞争者（来自推导边）及其共享的食物资源
+  const competitors = competitionLinks
+    .filter((link) => link.from === node.id || link.to === node.id)
+    .map((link) => ({
+      id: link.from === node.id ? link.to : link.from,
+      shared: link.shared,
+      mode: link.mode
+    }));
+  const predationRivals = competitors.filter((item) => item.mode === "predation");
+  const decayRivals = competitors.filter((item) => item.mode === "decomposition");
+
+  const chains = node.role === "consumer" ? foodChains(node.id, detail.links) : [];
+
+  const decompositionIn = detail.links.filter((link) => link.to === node.id && link.type === "decomposition");
+  const decompositionOut = detail.links.filter((link) => link.from === node.id && link.type === "decomposition");
+  const supportIn = detail.links.filter((link) => link.to === node.id && link.type === "support");
+  const supportOut = detail.links.filter((link) => link.from === node.id && link.type === "support");
 
   const groups: Array<{ label: string; hint: string; ids: string[] }> = [];
   if (node.role === "environment") {
-    groups.push({
-      label: "支持的生物",
-      hint: "环境因素 → 生物",
-      ids: outgoing.filter((link) => link.type === "support").map((link) => link.to)
-    });
+    if (supportOut.length) {
+      groups.push({ label: "支持的生物", hint: "环境因素 → 生物", ids: supportOut.map((link) => link.to) });
+    }
   } else {
-    const eats = incoming.filter((link) => link.type === "energy").map((link) => link.from);
-    const eatenBy = outgoing.filter((link) => link.type === "energy").map((link) => link.to);
-    const decomposedBy = outgoing.filter((link) => link.type === "decomposition").map((link) => link.to);
-    const decomposes = incoming.filter((link) => link.type === "decomposition").map((link) => link.from);
-    const supportedBy = incoming.filter((link) => link.type === "support").map((link) => link.from);
-    if (eats.length) groups.push({ label: "捕食 / 取食", hint: "能量流入", ids: eats });
-    if (eatenBy.length) groups.push({ label: "被捕食者", hint: "能量流出", ids: eatenBy });
-    if (decomposes.length) groups.push({ label: "分解对象", hint: "物质回收", ids: decomposes });
-    if (decomposedBy.length) groups.push({ label: "分解者", hint: "死亡后回归", ids: decomposedBy });
-    if (supportedBy.length) groups.push({ label: "依赖的环境", hint: "环境支持", ids: supportedBy });
+    if (decompositionIn.length) groups.push({ label: "分解对象", hint: "物质回收", ids: decompositionIn.map((link) => link.from) });
+    if (decompositionOut.length) groups.push({ label: "死亡后的分解者", hint: "回归环境", ids: decompositionOut.map((link) => link.to) });
+    if (supportIn.length) groups.push({ label: "依赖的环境", hint: "环境支持", ids: supportIn.map((link) => link.from) });
   }
 
   return (
@@ -164,6 +258,101 @@ function NodePanel({
       <p className="node-desc">{node.description}</p>
       {node.note && <p className="node-note">{node.note}</p>}
 
+      {node.kind === "species" && (
+        <>
+          {/* 主要食物（上游：能量流入） */}
+          <DietSection
+            kind="prey"
+            title={node.role === "decomposer" ? "分解的有机对象" : "主要食物"}
+            emptyText={node.role === "producer" ? "不依赖捕食——直接固定太阳能，是食物网的能量入口。" : "暂无记录的取食对象。"}
+            ids={preyIds.length ? preyIds : decompositionIn.map((link) => link.from)}
+            notesOf={(id) => detail.links.find((link) => link.to === node.id && link.from === id && (link.type === "energy" || link.type === "decomposition"))?.note}
+            nameOf={nameOf}
+            onSelect={onSelect}
+          />
+
+          {/* 天敌（下游：能量流出） */}
+          <DietSection
+            kind="predator"
+            title={node.role === "decomposer" ? "捕食分解者的生物" : "天敌"}
+            emptyText={predatorIds.length ? "" : node.role === "producer"
+              ? "在该生态系统中暂无记录的取食者。"
+              : "在该生态系统中没有记录到天敌，处于食物链顶端。"}
+            ids={predatorIds}
+            notesOf={(id) => energyOut.find((link) => link.to === id)?.note}
+            nameOf={nameOf}
+            onSelect={onSelect}
+          />
+
+          {/* 竞争者：共享猎物 / 共享分解对象 */}
+          <div className="rel-group diet-group">
+            <header>
+              <span><Swords size={12} /> 竞争者</span>
+              <small>{competitors.length ? `共 ${competitors.length} 种` : "无利用性竞争"}</small>
+            </header>
+            {predationRivals.length > 0 && (
+              <div className="rival-row">
+                <small>共同取食</small>
+                <div>
+                  {predationRivals.map((item) => (
+                    <button
+                      key={item.id}
+                      className="competitor-chip"
+                      onClick={() => onSelect(item.id)}
+                      title={`与${nameOf(item.id)}共同取食：${item.shared.map(nameOf).join("、")}`}
+                    >
+                      {nameOf(item.id)}
+                      <i>共享 {item.shared.length}</i>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {decayRivals.length > 0 && (
+              <div className="rival-row">
+                <small>共同分解</small>
+                <div>
+                  {decayRivals.map((item) => (
+                    <button
+                      key={item.id}
+                      className="competitor-chip"
+                      onClick={() => onSelect(item.id)}
+                      title={`与${nameOf(item.id)}共同分解：${item.shared.map(nameOf).join("、")}`}
+                    >
+                      {nameOf(item.id)}
+                      <i>共享 {item.shared.length}</i>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {competitors.length === 0 && (
+              <p className="node-note">在该生态系统中没有以相同方式利用同一资源的其他物种。</p>
+            )}
+          </div>
+
+          {/* 能量传递路径：以该物种为终点的食物链 */}
+          {chains.length > 0 && (
+            <div className="rel-group chain-group">
+              <header><span>能量传递路径</span><small>沿捕食关系回溯</small></header>
+              <ol>
+                {chains.map((chain, index) => (
+                  <li key={index}>
+                    {chain.map((id, i) => (
+                      <span key={id} className="chain-step">
+                        {i > 0 && <em className="chain-arrow">→</em>}
+                        {i === chain.length - 1 ? <strong>{nameOf(id)}</strong> : <button onClick={() => onSelect(id)}>{nameOf(id)}</button>}
+                      </span>
+                    ))}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 其他关系（分解 / 环境） */}
       {groups.map((group) => (
         <div className="rel-group" key={group.label}>
           <header><span>{group.label}</span><small>{group.hint}</small></header>
@@ -174,7 +363,49 @@ function NodePanel({
           </div>
         </div>
       ))}
-      {groups.length === 0 && <p className="node-note">该节点在当前生态系统中暂无记录的关系。</p>}
+
+      {/* 局部网络观察：隐藏其他节点，只看这个物种的上下游 */}
+      <button className="focus-button" onClick={() => onFocus(node.id)} disabled={focused}>
+        <Eye size={14} />
+        {focused ? "正在观察该物种的局部网络" : "只看它所在的局部网络"}
+      </button>
     </aside>
+  );
+}
+
+/** 主要食物 / 天敌分区，语义色与网络图保持一致 */
+function DietSection({
+  kind,
+  title,
+  emptyText,
+  ids,
+  notesOf,
+  nameOf,
+  onSelect
+}: {
+  kind: "prey" | "predator";
+  title: string;
+  emptyText: string;
+  ids: string[];
+  notesOf: (id: string) => string | undefined;
+  nameOf: (id: string) => string;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className={`rel-group diet-group diet-${kind}`}>
+      <header><span>{title}</span><small>{ids.length} 种</small></header>
+      {ids.length ? (
+        <div>
+          {ids.map((id) => (
+            <button key={id} className="diet-chip" onClick={() => onSelect(id)} title={notesOf(id)}>
+              {nameOf(id)}
+              {notesOf(id) && <small>{notesOf(id)}</small>}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="node-note">{emptyText}</p>
+      )}
+    </div>
   );
 }

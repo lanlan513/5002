@@ -147,15 +147,50 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 .web-band line { stroke: rgba(184, 232, 203, .09); stroke-dasharray: 2 6; }
 .web-band text { fill: #5f7a6d; font: 10px "DM Mono", monospace; letter-spacing: 1px; }
 .web-link { fill: none; transition: opacity .2s; }
+.web-link-group { transition: opacity .2s; }
+/* 能量流动光点：沿捕食边从食物向捕食者方向流动 */
+.web-flow {
+  fill: none;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-dasharray: 2 16;
+  animation: flow-dash 1.1s linear infinite;
+  pointer-events: none;
+}
+@keyframes flow-dash { to { stroke-dashoffset: -18; } }
+/* 邻里节点上的方向标签（食物 / 天敌 / 竞争者…） */
+.node-direction rect { stroke-width: 1; }
+.node-direction text { font: 9px "DM Mono", monospace; dominant-baseline: central; letter-spacing: .5px; pointer-events: none; }
 .web-node { cursor: pointer; transition: opacity .2s; }
 .web-node .node-glyph { text-anchor: middle; dominant-baseline: central; font-size: 13px; font-weight: 600; pointer-events: none; }
 .web-node .node-label { text-anchor: middle; fill: #cfe0d6; font-size: 11.5px; pointer-events: none; }
 .foodweb-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 14px 4.6vw 26px; color: #8ba296; font-size: 11px; }
 .foodweb-legend span { display: inline-flex; align-items: center; gap: 7px; }
 .foodweb-legend i { width: 18px; height: 2px; display: inline-block; }
+.foodweb-legend i.legend-dashed { background: repeating-linear-gradient(90deg, #c39ce0 0 3px, transparent 3px 7px); }
 .foodweb-legend .legend-dot { width: 11px; height: 11px; border: 1.5px solid; border-radius: 50%; background: transparent; }
+.foodweb-legend .legend-direction { padding: 3px 10px; border: 1px solid rgba(184, 232, 203, .18); border-radius: 999px; color: #9db3a7; }
 .foodweb-legend button { margin-left: auto; background: transparent; border: 1px solid rgba(184, 232, 203, .3); border-radius: 999px; color: #a9c6b4; font-size: 11px; padding: 5px 14px; }
 .foodweb-legend button:hover { border-color: #98f0c6; color: #d7f5e3; }
+
+/* ---- 图层工具栏与局部观察横幅 ---- */
+.web-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 4.6vw; border-bottom: 1px solid rgba(184, 232, 203, .1); }
+.web-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; background: transparent; border: 1px solid rgba(195, 156, 224, .35); border-radius: 999px; color: #cbb6e0; font-size: 12px; transition: background .2s, border-color .2s, color .2s; }
+.web-toggle .toggle-state { font: 9px "DM Mono", monospace; color: #8a7aa0; }
+.web-toggle:hover { border-color: #c39ce0; }
+.web-toggle.is-on { background: rgba(195, 156, 224, .12); color: #e3d2f2; }
+.web-toggle.is-on .toggle-state { color: #c39ce0; }
+.depth-switch { display: inline-flex; align-items: center; gap: 4px; padding: 3px 5px 3px 12px; border: 1px solid rgba(152, 240, 198, .3); border-radius: 999px; color: #7e968a; }
+.depth-switch button { padding: 4px 12px; background: transparent; border: none; border-radius: 999px; color: #a9c6b4; font-size: 11px; }
+.depth-switch button.is-active { background: rgba(152, 240, 198, .16); color: #d7f5e3; }
+.focus-banner { display: flex; align-items: center; gap: 12px; margin: 14px 4.6vw 0; padding: 11px 18px; background: rgba(152, 240, 198, .08); border: 1px solid rgba(152, 240, 198, .32); border-radius: 8px; color: #b9d8c6; font-size: 13px; }
+.focus-banner svg { color: var(--eco-color, #98f0c6); flex: none; }
+.focus-banner strong { color: #e8f2ed; font-weight: 600; }
+.focus-banner em { color: #7e968a; font-style: normal; font-size: 11px; margin-left: 4px; }
+.focus-banner .focus-exit { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(152, 240, 198, .4); border-radius: 999px; color: #d7f5e3; font-size: 12px; }
+.focus-banner .focus-exit:hover { background: rgba(152, 240, 198, .14); }
+.factor-chip.is-out, .factor-chip:disabled { opacity: .3; cursor: not-allowed; }
+.factor-chip.is-out:hover { background: transparent; border-color: rgba(143, 184, 216, .45); }
 
 /* ---- 节点信息面板 ---- */
 .node-panel { position: relative; margin: 10px 2vw 26px; padding: 26px 24px; background: #0e241d; border: 1px solid rgba(184, 232, 203, .2); border-radius: 8px; align-self: start; }
@@ -177,6 +212,34 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 .rel-group > div { display: flex; flex-wrap: wrap; gap: 7px; }
 .rel-group button { padding: 5px 12px; background: rgba(184, 232, 203, .07); border: 1px solid rgba(184, 232, 203, .18); border-radius: 999px; color: #cfe0d6; font-size: 12px; transition: background .15s, border-color .15s; }
 .rel-group button:hover { background: rgba(184, 232, 203, .16); border-color: var(--eco-color, #8fd8a8); }
+
+/* 主要食物 / 天敌：语义色边条，与网络图上下游高亮一致 */
+.diet-group { border-top: 1px solid rgba(184, 232, 203, .12); border-left: 2px solid transparent; padding-left: 12px; border-radius: 0 4px 4px 0; }
+.diet-prey { border-left-color: #7fe0a0; }
+.diet-predator { border-left-color: #ef8f74; }
+.diet-group header span { display: inline-flex; align-items: center; gap: 6px; }
+.diet-chip { display: inline-flex; align-items: baseline; gap: 7px; }
+.diet-chip small { color: #7e968a; font-size: 10px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diet-prey button:hover { border-color: #7fe0a0; }
+.diet-predator button:hover { border-color: #ef8f74; }
+.competitor-chip { display: inline-flex; align-items: baseline; gap: 7px; border-color: rgba(195, 156, 224, .35) !important; }
+.competitor-chip:hover { border-color: #c39ce0 !important; }
+.competitor-chip i { font-style: normal; font: 9px "DM Mono", monospace; color: #a88ec4; }
+.rival-row { margin-bottom: 10px; }
+.rival-row:last-child { margin-bottom: 0; }
+.rival-row > small { display: block; font: 9px "DM Mono", monospace; color: #8a7aa0; letter-spacing: .5px; margin-bottom: 6px; }
+
+/* 能量传递路径：食物链文字序列 */
+.chain-group ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.chain-step { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.chain-step button { padding: 4px 10px; background: rgba(184, 232, 203, .05); border: 1px solid rgba(184, 232, 203, .16); border-radius: 999px; color: #b9d2c5; }
+.chain-step strong { color: #f0e0b8; font-weight: 600; padding: 4px 10px; background: rgba(217, 179, 108, .12); border: 1px solid rgba(217, 179, 108, .35); border-radius: 999px; }
+.chain-arrow { color: #6f8a7e; font-style: normal; font-size: 11px; }
+
+/* 局部观察入口按钮 */
+.focus-button { width: 100%; margin-top: 22px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; background: rgba(152, 240, 198, .1); border: 1px solid rgba(152, 240, 198, .4); border-radius: 8px; color: #d7f5e3; font-size: 13px; transition: background .2s; }
+.focus-button:hover:not(:disabled) { background: rgba(152, 240, 198, .2); }
+.focus-button:disabled { opacity: .55; cursor: default; }
 
 /* ---- 数据管理后台 ---- */
 .admin-page { min-height: 100vh; padding: 128px 4.6vw 100px; background: #081613; }
