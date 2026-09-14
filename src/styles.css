@@ -307,6 +307,105 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
 
 .body-loading { min-height: 70vh; }
 
+/* ===== 生理过程模拟 ===== */
+.physio-lab { min-height: 100vh; padding: 108px 4.6vw 80px; background: radial-gradient(circle at 82% 4%, rgba(38, 66, 88, .35) 0, transparent 46%), #071314; color: #e8f2ed; }
+.physio-lab-header { max-width: 800px; margin-bottom: 40px; }
+.physio-lab-header .eyebrow { color: #7fb89a; }
+.physio-lab-header h1 { font: 400 clamp(38px, 4.4vw, 62px)/1.12 "Source Serif 4", serif; margin-bottom: 18px; }
+.physio-lab-lede { color: #a9c0b4; font-size: 14px; line-height: 1.9; max-width: 660px; margin-bottom: 18px; }
+.physio-lab-lede strong { color: #d8f5e2; font-weight: 500; }
+.physio-scope-note { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 9px 16px; border: 1px solid rgba(255, 196, 107, .3); border-radius: 999px; background: rgba(255, 196, 107, .07); color: #e8cf9f; font-size: 11.5px; line-height: 1.6; }
+.physio-scope-note svg { flex: none; color: #ffc46b; }
+
+.physio-workspace { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 38px; align-items: start; }
+.physio-figure-pane { position: sticky; top: 90px; display: flex; flex-direction: column; border: 1px solid rgba(184, 232, 203, .16); border-radius: 6px; background: linear-gradient(180deg, rgba(16, 37, 31, .9), rgba(10, 26, 22, .95)); padding: 18px; }
+.physio-canvas-wrap { border: 1px solid rgba(184, 232, 203, .1); border-radius: 5px; background: radial-gradient(circle at 50% 30%, rgba(21, 48, 40, .6), rgba(8, 20, 17, .9) 75%); overflow: hidden; }
+.physio-body-canvas { display: block; width: 100%; aspect-ratio: 260 / 360; }
+.physio-legend { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+.physio-legend span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid rgba(184, 232, 203, .16); border-radius: 999px; color: #a9c2b4; font-size: 10.5px; }
+.physio-legend i { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 6px currentColor; }
+.physio-figure-hint { margin: 12px 0 0; color: #678375; font: 10px "DM Mono", monospace; letter-spacing: .4px; text-align: center; }
+
+.physio-content-pane { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+.physio-controls { border: 1px solid rgba(184, 232, 203, .14); border-radius: 6px; padding: 16px 18px; background: rgba(16, 37, 31, .6); display: flex; flex-direction: column; gap: 14px; }
+.physio-state-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.physio-state-chip { text-align: center; padding: 11px 6px 9px; border: 1px solid rgba(184, 232, 203, .18); border-radius: 4px; background: rgba(13, 30, 25, .7); color: #c4dccf; transition: all .18s; }
+.physio-state-chip strong { display: block; font-size: 13.5px; font-weight: 600; }
+.physio-state-chip small { font: 8.5px "DM Mono", monospace; letter-spacing: 1px; color: #6f8e7e; }
+.physio-state-chip:hover { border-color: rgba(152, 240, 198, .5); color: #fff; transform: translateY(-2px); }
+.physio-state-chip.is-active { border-color: #98f0c6; background: rgba(152, 240, 198, .14); color: #eafff3; box-shadow: 0 0 18px rgba(152, 240, 198, .14); }
+.physio-state-chip.is-active small { color: #9fe8c5; }
+
+.physio-time-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 13px; border-top: 1px solid rgba(184, 232, 203, .12); }
+.physio-play { display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; border: 1px solid #98f0c6; border-radius: 999px; background: rgba(152, 240, 198, .12); color: #d9fce8; font-size: 12px; transition: background .18s; }
+.physio-play:hover { background: rgba(152, 240, 198, .22); }
+.physio-speed { display: inline-flex; border: 1px solid rgba(184, 232, 203, .22); border-radius: 999px; overflow: hidden; }
+.physio-speed button { padding: 8px 14px; background: transparent; color: #9fb8ab; font: 11px "DM Mono", monospace; border-right: 1px solid rgba(184, 232, 203, .14); }
+.physio-speed button:last-child { border-right: 0; }
+.physio-speed button:hover { color: #eafff3; background: rgba(184, 232, 203, .07); }
+.physio-speed button.is-active { background: rgba(152, 240, 198, .18); color: #d9fce8; font-weight: 600; }
+.physio-reset { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid rgba(184, 232, 203, .22); border-radius: 999px; background: transparent; color: #9fb8ab; font-size: 11.5px; }
+.physio-reset:hover { color: #fff; border-color: rgba(184, 232, 203, .5); }
+.physio-clock { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; color: #9fe8c5; font: 12px "DM Mono", monospace; letter-spacing: .5px; }
+.physio-clock svg { color: #6f9c84; }
+
+.metric-card-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; }
+.metric-card { position: relative; text-align: left; padding: 14px 14px 12px; border: 1px solid rgba(184, 232, 203, .15); border-radius: 5px; background: rgba(13, 30, 25, .65); color: #e6f3eb; transition: transform .18s, border-color .18s, background .18s; overflow: hidden; }
+.metric-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--metric-color); opacity: .6; }
+.metric-card:hover { transform: translateY(-3px); border-color: var(--metric-color); background: rgba(19, 42, 35, .9); }
+.metric-card.is-focused { border-color: var(--metric-color); background: rgba(19, 42, 35, .95); box-shadow: 0 0 16px color-mix(in srgb, var(--metric-color) 22%, transparent); }
+.metric-label { display: block; color: #8fae9e; font-size: 11px; margin-bottom: 7px; }
+.metric-value { display: block; font: 500 26px "DM Mono", monospace; color: var(--metric-color); line-height: 1; margin-bottom: 9px; }
+.metric-value small { font-size: 10px; color: #7f9a8d; margin-left: 4px; letter-spacing: .3px; }
+.metric-bar { display: block; height: 3px; border-radius: 2px; background: rgba(184, 232, 203, .12); overflow: hidden; margin-bottom: 9px; }
+.metric-bar i { display: block; height: 100%; border-radius: 2px; background: var(--metric-color); box-shadow: 0 0 8px var(--metric-color); transition: width .3s ease; }
+.metric-organ { display: block; color: #6f8e7e; font-size: 10px; }
+
+.physio-panel { border: 1px solid rgba(184, 232, 203, .14); border-radius: 6px; padding: 16px 18px 14px; background: rgba(14, 32, 27, .6); }
+.physio-panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.physio-panel-head h3 { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: #cfe6d8; font-weight: 600; }
+.physio-panel-head h3 svg { color: #8fdcb4; }
+.physio-panel-head span { color: #6b8578; font-size: 10.5px; }
+.waveform-canvas { display: block; width: 100%; height: 170px; }
+
+.trend-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.trend-chart { margin: 0; }
+.trend-chart figcaption { display: flex; align-items: center; gap: 7px; color: #a9c2b4; font-size: 11px; margin-bottom: 6px; }
+.trend-chart figcaption small { color: #6b8578; font-size: 9.5px; }
+.trend-dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 7px currentColor; }
+.trend-chart canvas { display: block; width: 100%; height: 108px; border: 1px solid rgba(184, 232, 203, .09); border-radius: 4px; background: rgba(8, 20, 17, .5); }
+
+.state-info-card { border: 1px solid rgba(152, 240, 198, .2); border-radius: 6px; padding: 20px 22px; background: linear-gradient(150deg, rgba(152, 240, 198, .07), rgba(12, 29, 24, .85) 60%); }
+.state-info-kicker { font: 10px "DM Mono", monospace; letter-spacing: 1.4px; color: #9fe8c5; }
+.state-info-head h3 { margin: 7px 0 0; font: 400 21px "Source Serif 4", serif; color: #eafff3; }
+.state-info-card > p { margin: 12px 0 14px; color: #a9c0b4; font-size: 12.5px; line-height: 1.85; }
+.state-targets { display: flex; flex-wrap: wrap; gap: 8px; }
+.state-targets span { padding: 6px 12px; border: 1px solid rgba(184, 232, 203, .18); border-radius: 999px; color: #9fb8ab; font-size: 11px; }
+.state-targets strong { color: #d9fce8; font-family: "DM Mono", monospace; font-weight: 500; }
+.state-stats { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(184, 232, 203, .12); color: #7f9a8d; font-size: 11px; }
+.state-stats span { display: inline-flex; align-items: center; gap: 7px; }
+.state-stats svg { color: #9fe8c5; }
+
+.physio-structure-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #7f9a8d; font-size: 11.5px; }
+.physio-structure-links button { display: inline-flex; align-items: center; gap: 4px; padding: 6px 13px; border: 1px solid rgba(184, 232, 203, .2); border-radius: 999px; background: transparent; color: #bfe4cd; font-size: 11.5px; transition: all .15s; }
+.physio-structure-links button:hover { border-color: #98f0c6; color: #fff; }
+
+.physio-disclaimer { border: 1px solid rgba(255, 196, 107, .28); border-radius: 6px; padding: 16px 20px; background: rgba(255, 196, 107, .05); }
+.physio-disclaimer strong { color: #ffd08a; font-size: 12px; letter-spacing: .5px; }
+.physio-disclaimer p { margin: 7px 0 0; color: #b8a67f; font-size: 11.5px; line-height: 1.8; }
+.physio-disclaimer p strong { color: #e8cf9f; letter-spacing: 0; }
+
+/* 人体总览 → 生理模拟入口卡 */
+.physio-launch-card { width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 15px; align-items: center; text-align: left; padding: 17px 19px; border: 1px solid rgba(152, 240, 198, .3); border-radius: 6px; background: linear-gradient(120deg, rgba(152, 240, 198, .09), rgba(12, 29, 24, .85) 65%); color: #e6f3eb; transition: transform .18s, border-color .18s; }
+.physio-launch-card:hover { transform: translateY(-3px); border-color: #98f0c6; }
+.physio-launch-icon { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid rgba(152, 240, 198, .55); border-radius: 50%; color: #98f0c6; background: rgba(152, 240, 198, .1); }
+.physio-launch-copy small { font: 9px "DM Mono", monospace; letter-spacing: 1.2px; color: #7fb89a; }
+.physio-launch-copy strong { display: block; margin: 4px 0 3px; font-size: 13.5px; font-weight: 600; color: #eafff3; }
+.physio-launch-copy p { margin: 0; color: #8fae9e; font-size: 11.5px; line-height: 1.6; }
+.physio-launch-card > svg { color: #9fe8c5; }
+
+
 @media (max-width: 1080px) {
   .body-workspace { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 26px; }
 }
@@ -320,4 +419,5 @@ footer { background: #071314; min-height: 145px; padding: 33px 4.6vw; display: f
   .reading-page { padding: 94px 20px 70px; }.reading-page .back-button { margin-bottom: 45px; }.reading-page h1 { font-size: 44px; }.reading-page header p { font-size: 15px; }.reading-visual { height: 250px; margin: 42px 0; }.article-body { grid-template-columns: 1fr; gap: 24px; }.article-body > p { font-size: 18px; }.article-body aside { max-width: 200px; }
   .body-lab { padding: 90px 20px 60px; }.body-lab-header { margin-bottom: 30px; }.body-workspace { grid-template-columns: 1fr; gap: 24px; }.body-figure-pane { position: static; }.body-diagram svg { max-height: 62vh; max-width: 380px; margin: 0 auto; }.system-chip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.organ-hotspot-list, .organ-cards, .tissue-cards, .cell-cards { grid-template-columns: 1fr; }.fact-grid, .cell-facts { grid-template-columns: 1fr; }.level-hero { padding: 22px 20px; }.body-launch-card { grid-template-columns: 44px 1fr auto; gap: 14px; padding: 20px; }.body-launch-orb { width: 38px; height: 38px; }
   .coupling-card { padding: 18px 16px; }.pathway-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.exchange-row { grid-template-columns: minmax(80px, 110px) 22px 1fr; padding: 10px 11px; }.pathway-route li { font-size: 10.5px; }
+  .physio-lab { padding: 90px 20px 60px; }.physio-lab-header { margin-bottom: 28px; }.physio-workspace { grid-template-columns: 1fr; gap: 22px; }.physio-figure-pane { position: static; }.physio-body-canvas { max-width: 340px; margin: 0 auto; }.physio-state-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }.metric-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.trend-grid { grid-template-columns: 1fr; }.physio-clock { margin-left: 0; width: 100%; }.physio-panel-head { flex-direction: column; gap: 3px; }
 }

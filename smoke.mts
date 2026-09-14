@@ -189,5 +189,78 @@ assert(
   "肺 → 血管携带氧气"
 );
 
+console.log("\n[10] 生理过程模拟");
+window.location.hash = "#physio";
+window.dispatchEvent(new window.Event("hashchange"));
+await sleep(1000);
+assert(text().includes("让呼吸、心跳与血流"), "渲染生理模拟页标题");
+assert(text().includes("静息") && text().includes("运动") && text().includes("睡眠") && text().includes("进食后") && text().includes("紧张"), "显示五种生理状态");
+assert(text().includes("心率") && text().includes("呼吸频率") && text().includes("心输出量") && text().includes("血氧饱和度") && text().includes("消化活动"), "显示五项生理指标");
+assert(document.querySelectorAll(".physio-content-pane canvas").length >= 4, `渲染波形与趋势曲线画布（实际 ${document.querySelectorAll(".physio-content-pane canvas").length}）`);
+assert(text().includes("教学模型说明") && text().includes("不能用于疾病诊断"), "显示教学目的免责声明");
+assert((document.querySelector(".physio-clock")?.textContent ?? "").includes("T+"), "显示模拟时钟");
+
+// 指标卡片与人体结构联动
+const hrCard = document.querySelector(".metric-card-heartRate");
+hrCard.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(200);
+assert(hrCard.classList.contains("is-focused"), "点击心率卡片后标记对应结构（心脏）");
+hrCard.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(200);
+
+// 切换到运动状态并加速时间
+const exerciseChip = [...document.querySelectorAll(".physio-state-chip")].find((b) =>
+  (b.textContent ?? "").includes("运动")
+);
+assert(Boolean(exerciseChip), "找到运动状态按钮");
+exerciseChip.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+const speed4 = [...document.querySelectorAll(".physio-speed button")].find((b) =>
+  (b.textContent ?? "").includes("4×")
+);
+speed4.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(4500);
+const hrValue = parseInt(document.querySelector(".metric-card-heartRate .metric-value")?.textContent ?? "0", 10);
+const breathValue = parseInt(document.querySelector(".metric-card-breathRate .metric-value")?.textContent ?? "0", 10);
+const flowValue = parseFloat(document.querySelector(".metric-card-cardiacOutput .metric-value")?.textContent ?? "0");
+assert(hrValue > 110, `运动状态下心率显著上升（当前 ${hrValue} 次/分）`);
+assert(breathValue > 24, `运动状态下呼吸频率上升（当前 ${breathValue} 次/分）`);
+assert(flowValue > 10, `运动状态下心输出量上升（当前 ${flowValue} L/min）`);
+assert(text().includes("交感神经"), "状态说明随所选状态更新");
+
+// 暂停后模拟时钟应停止
+const playButton = document.querySelector(".physio-play");
+playButton.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(250);
+assert((playButton.textContent ?? "").includes("继续"), "时间可暂停");
+const clockA = document.querySelector(".physio-clock")?.textContent ?? "";
+await sleep(500);
+const clockB = document.querySelector(".physio-clock")?.textContent ?? "";
+assert(clockA === clockB && clockA.includes("T+"), `暂停时时钟停止（${clockA.trim()}）`);
+
+// 重置后回到静息基线
+document.querySelector(".physio-reset").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(400);
+const hrAfterReset = parseInt(document.querySelector(".metric-card-heartRate .metric-value")?.textContent ?? "0", 10);
+assert(hrAfterReset >= 65 && hrAfterReset <= 75, `重置后心率回到静息基线（当前 ${hrAfterReset}）`);
+assert(/T\+ 00:0[01]/.test(document.querySelector(".physio-clock")?.textContent ?? ""), "重置后模拟时钟归零");
+
+// 从模拟页跳回人体结构
+const heartLink = [...document.querySelectorAll(".physio-structure-links button")].find((b) =>
+  (b.textContent ?? "").includes("心脏")
+);
+heartLink.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(800);
+assert(window.location.hash === "#body/organ/heart", "指标可跳转到人体结构中的对应器官");
+
+console.log("\n[11] 人体总览的模拟入口");
+window.location.hash = "#body";
+window.dispatchEvent(new window.Event("hashchange"));
+await sleep(900);
+assert(text().includes("打开生理过程模拟"), "人体总览显示生理模拟入口卡");
+const launchCard = document.querySelector(".physio-launch-card");
+launchCard.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+await sleep(600);
+assert(window.location.hash === "#physio", "入口卡跳转回生理模拟页");
+
 console.log(failures.length ? `\n失败 ${failures.length} 项` : "\n全部冒烟测试通过");
 process.exit(failures.length ? 1 : 0);

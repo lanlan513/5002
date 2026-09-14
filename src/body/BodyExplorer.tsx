@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronRight, Layers, MousePointerClick, Network, Pause, Play, Waves } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, ArrowUpRight, ChevronRight, Layers, MousePointerClick, Network, Pause, Play, Waves } from "lucide-react";
 import {
   api,
   type BodyCell,
@@ -302,6 +302,7 @@ export function BodyExplorer({ route, onNavigate }: BodyExplorerProps) {
                 onNavigate(`body/system/${slug}`);
               }}
               onOpenOrgan={goOrgan}
+              onNavigate={onNavigate}
             />
           )}
 
@@ -365,7 +366,8 @@ function BodyOverviewPanel({
   onTogglePlay,
   onSelectPathway,
   onSelectSystem,
-  onOpenOrgan
+  onOpenOrgan,
+  onNavigate
 }: {
   overview: BodyOverview;
   activeSystem: string | null;
@@ -379,6 +381,7 @@ function BodyOverviewPanel({
   onSelectPathway: (slug: string) => void;
   onSelectSystem: (slug: string) => void;
   onOpenOrgan: (slug: string) => void;
+  onNavigate: (to: string) => void;
 }) {
   const organName = (slug: string) =>
     network?.nodes.find((node) => node.slug === slug)?.name ?? slug;
@@ -392,6 +395,16 @@ function BodyOverviewPanel({
           <p>{overview.description}</p>
         </div>
       </div>
+
+      <button className="physio-launch-card" onClick={() => onNavigate("physio")}>
+        <span className="physio-launch-icon"><Activity size={19} /></span>
+        <span className="physio-launch-copy">
+          <small>PHYSIOLOGY SIMULATION</small>
+          <strong>这些系统如何协同工作？打开生理过程模拟</strong>
+          <p>控制时间与状态，观察心率、呼吸、血流与消化的实时联动。</p>
+        </span>
+        <ArrowUpRight size={18} />
+      </button>
 
       {network && !activeSystem && (
         <SystemCouplingCard

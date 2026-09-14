@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { api, type Knowledge, type Topic } from "./api";
 import { BodyExplorer, type BodyRoute } from "./body/BodyExplorer";
+import { PhysioExplorer } from "./physio/PhysioExplorer";
 
 type BodyPage = { kind: "body"; level: BodyRoute["level"]; slug?: string };
 
@@ -21,6 +22,7 @@ type Page =
   | { kind: "home" }
   | { kind: "topic"; slug: string }
   | { kind: "entry"; slug: string }
+  | { kind: "physio" }
   | BodyPage;
 const iconMap = {
   "circle-dot": CircleDot,
@@ -43,6 +45,7 @@ const routeFromHash = (): Page => {
   const [kind, slug, detail] = window.location.hash.slice(1).split("/");
   if (kind === "topic" && slug) return { kind: "topic", slug };
   if (kind === "entry" && slug) return { kind: "entry", slug };
+  if (kind === "physio") return { kind: "physio" };
   if (kind === "body") {
     if (slug === "system" && detail) return { kind: "body", level: "system", slug: detail };
     if (slug === "organ" && detail) return { kind: "body", level: "organ", slug: detail };
@@ -94,6 +97,7 @@ function App() {
       )}
       {page.kind === "topic" && <TopicPage slug={page.slug} onNavigate={navigate} />}
       {page.kind === "entry" && <EntryPage slug={page.slug} onNavigate={navigate} />}
+      {page.kind === "physio" && <PhysioExplorer onNavigate={navigate} />}
       {page.kind === "body" && (
         <BodyExplorer
           route={page.level === "body" ? { level: "body" } : { level: page.level, slug: page.slug ?? "" }}
@@ -137,6 +141,7 @@ function Header({
       <nav className={mobileMenu ? "primary-nav is-open" : "primary-nav"}>
         <button onClick={() => onNavigate("")}>探索</button>
         <button onClick={() => onNavigate("body")}>人体</button>
+        <button onClick={() => onNavigate("physio")}>生理模拟</button>
         {topics.slice(0, 2).map((topic) => (
           <button key={topic.slug} onClick={() => onNavigate(`topic/${topic.slug}`)}>
             {topic.short_name}
